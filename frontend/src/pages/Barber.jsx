@@ -4,6 +4,7 @@ import { Routes, Route } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import api from '../api';
 import Shell, { fmt } from '../components/Shell';
+import ConfirmModal from '../components/Modal';
 import Crud, { Stat, StatusBadge } from '../components/Crud';
 import { ui } from '../redux/slices';
 import {
@@ -34,7 +35,8 @@ import {
   Save,
   Building,
   KeyRound,
-  ExternalLink
+  ExternalLink,
+  Store
 } from 'lucide-react';
 
 const barberLinks = [
@@ -149,6 +151,9 @@ function Appts() {
   });
   const [showAddForm, setShowAddForm] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [billingTarget, setBillingTarget] = useState(null);
+  const [payMethod, setPayMethod] = useState('cash');
+  const [statusConfirm, setStatusConfirm] = useState(null);
 
   useLive();
 
@@ -161,9 +166,15 @@ function Appts() {
   const setStatus = (id, status) =>
     d(ui.actions.submitRequest({ method: 'patch', url: `/barber/appointments/${id}`, body: { status }, refresh: fetchAppts }));
 
-  const bill = (id) => {
-    const method = prompt('Payment method (cash / upi / card / online):', 'cash') || 'cash';
-    d(ui.actions.submitRequest({ url: '/barber/invoices', body: { appointmentId: id, method }, refresh: fetchAppts }));
+  const confirmBill = () => {
+    if (billingTarget) {
+      d(ui.actions.submitRequest({
+        url: '/barber/invoices',
+        body: { appointmentId: billingTarget._id, method: payMethod },
+        refresh: fetchAppts
+      }));
+      setBillingTarget(null);
+    }
   };
 
   const add = (e) => {
@@ -308,8 +319,8 @@ function Appts() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
-                ? 'bg-white text-stone-900 shadow-sm font-semibold'
-                : 'text-stone-600 hover:text-stone-900'
+              ? 'bg-white text-stone-900 shadow-sm font-semibold'
+              : 'text-stone-600 hover:text-stone-900'
               }`}
           >
             {tab.label}
@@ -386,7 +397,15 @@ function Appts() {
                     </button>
                     <button
                       className="btn-danger text-xs py-1.5 px-3"
-                      onClick={() => setStatus(a._id, 'rejected')}
+                      onClick={() =>
+                        setStatusConfirm({
+                          id: a._id,
+                          status: 'rejected',
+                          label: `reject appointment for ${a.customerId?.name || 'this client'}`,
+                          type: 'danger',
+                          confirmText: 'Reject Appointment'
+                        })
+                      }
                     >
                       <XCircle className="w-3.5 h-3.5" />
                       <span>Reject</span>
@@ -398,20 +417,39 @@ function Appts() {
                   <>
                     <button
                       className="btn-brand text-xs py-1.5 px-3"
-                      onClick={() => bill(a._id)}
+                      onClick={() => {
+                        setPayMethod('cash');
+                        setBillingTarget(a);
+                      }}
                     >
                       <CreditCard className="w-3.5 h-3.5" />
                       <span>Complete & Bill</span>
                     </button>
                     <button
                       className="btn-o text-xs py-1.5 px-3"
-                      onClick={() => setStatus(a._id, 'no_show')}
+                      onClick={() =>
+                        setStatusConfirm({
+                          id: a._id,
+                          status: 'no_show',
+                          label: `mark ${a.customerId?.name || 'this client'} as No-Show`,
+                          type: 'warning',
+                          confirmText: 'Mark No-Show'
+                        })
+                      }
                     >
                       <span>No-Show</span>
                     </button>
                     <button
                       className="btn-danger text-xs py-1.5 px-3"
-                      onClick={() => setStatus(a._id, 'cancelled')}
+                      onClick={() =>
+                        setStatusConfirm({
+                          id: a._id,
+                          status: 'cancelled',
+                          label: `cancel appointment for ${a.customerId?.name || 'this client'}`,
+                          type: 'danger',
+                          confirmText: 'Cancel Appointment'
+                        })
+                      }
                     >
                       <span>Cancel</span>
                     </button>
@@ -429,6 +467,66 @@ function Appts() {
           ))
         )}
       </div>
+
+      {/* Payment Method Billing Modal */}
+      <ConfirmModal
+        isOpen={Boolean(billingTarget)}
+        type="info"
+        title="Complete Service & Generate Bill"
+        message={
+          billingTarget
+            ? `Client: ${billingTarget.customerId?.name || 'Walk-in'} • Service: ${billingTarget.serviceName} • Total: ₹${billingTarget.price}`
+            : ''
+        }
+        confirmText="Confirm & Mark Paid"
+        cancelText="Cancel"
+        confirmButtonClass="btn-brand"
+        onConfirm={confirmBill}
+        onClose={() => setBillingTarget(null)}
+      >
+        <div className="space-y-2 pt-1">
+          <label className="text-xs font-semibold text-stone-700 block">Select Payment Mode</label>
+          <div className="grid grid-cols-2 gap-2 text-xs font-medium">
+            {[
+              { id: 'cash', label: '💵 Cash' },
+              { id: 'upi', label: '📱 UPI / QR' },
+              { id: 'card', label: '💳 Card' },
+              { id: 'online', label: '🌐 Online' }
+            ].map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setPayMethod(m.id)}
+                className={`py-2 px-3 rounded-xl border text-center transition-all ${
+                  payMethod === m.id
+                    ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold ring-1 ring-amber-600'
+                    : 'border-stone-200 hover:border-stone-300 text-stone-700'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </ConfirmModal>
+
+      {/* Appointment Status Action Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(statusConfirm)}
+        type={statusConfirm?.type || 'warning'}
+        title="Confirm Appointment Action"
+        message={statusConfirm ? `Are you sure you want to ${statusConfirm.label}?` : ''}
+        confirmText={statusConfirm?.confirmText || 'Confirm'}
+        cancelText="Cancel"
+        confirmButtonClass={statusConfirm?.type === 'danger' ? 'bg-red-600 hover:bg-red-700 text-white' : undefined}
+        onConfirm={() => {
+          if (statusConfirm) {
+            setStatus(statusConfirm.id, statusConfirm.status);
+            setStatusConfirm(null);
+          }
+        }}
+        onClose={() => setStatusConfirm(null)}
+      />
     </Shell>
   );
 }
@@ -596,8 +694,8 @@ function StoreAndProfile() {
         <button
           onClick={() => setTab('store')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'store'
-              ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
-              : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+            ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
+            : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
             }`}
         >
           <Building className="w-4 h-4" />
@@ -607,8 +705,8 @@ function StoreAndProfile() {
         <button
           onClick={() => setTab('profile')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'profile'
-              ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
-              : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+            ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
+            : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
             }`}
         >
           <User className="w-4 h-4" />
@@ -803,8 +901,8 @@ function StoreAndProfile() {
                       type="button"
                       onClick={() => toggleHoliday(d.idx)}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${isOff
-                          ? 'bg-red-50 text-red-700 border border-red-200 line-through'
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                        ? 'bg-red-50 text-red-700 border border-red-200 line-through'
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                         }`}
                     >
                       {d.label} {isOff ? '(Closed)' : '(Open)'}

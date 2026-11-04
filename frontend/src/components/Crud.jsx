@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ui } from '../redux/slices';
+import ConfirmModal from './Modal';
 import { Plus, Search, Trash2, X, AlertCircle, Sparkles, Filter } from 'lucide-react';
 
 export function StatusBadge({ status }) {
@@ -74,6 +75,7 @@ export default function Crud({
   const [f, setF] = useState({});
   const [q, setQ] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState(null);
 
   useEffect(() => {
     d(ui.actions.fetchRequest({ key: k, url }));
@@ -86,9 +88,10 @@ export default function Crud({
     setIsFormOpen(false);
   };
 
-  const del = (id) => {
-    if (window.confirm('Are you sure you want to remove this record?')) {
-      d(ui.actions.submitRequest({ method: 'delete', url: `${url}/${id}`, refresh: { key: k, url } }));
+  const executeDelete = () => {
+    if (recordToDelete) {
+      d(ui.actions.submitRequest({ method: 'delete', url: `${url}/${recordToDelete}`, refresh: { key: k, url } }));
+      setRecordToDelete(null);
     }
   };
 
@@ -202,7 +205,7 @@ export default function Crud({
                     )}
                   </div>
                   <button
-                    onClick={() => del(r._id)}
+                    onClick={() => setRecordToDelete(r._id)}
                     className="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -250,7 +253,7 @@ export default function Crud({
                       ))}
                       <td className="py-3.5 px-4 text-right">
                         <button
-                          onClick={() => del(r._id)}
+                          onClick={() => setRecordToDelete(r._id)}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-stone-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -268,6 +271,18 @@ export default function Crud({
           </div>
         </>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(recordToDelete)}
+        type="danger"
+        title="Remove Record"
+        message="Are you sure you want to permanently delete this record? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        onConfirm={executeDelete}
+        onClose={() => setRecordToDelete(null)}
+      />
     </div>
   );
 }

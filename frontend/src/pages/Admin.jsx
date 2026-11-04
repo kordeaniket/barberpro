@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Routes, Route } from 'react-router-dom';
 import Shell from '../components/Shell';
+import ConfirmModal from '../components/Modal';
 import { Stat, StatusBadge } from '../components/Crud';
 import { ui } from '../redux/slices';
 import {
@@ -112,6 +113,7 @@ function Shops() {
   const [f, setF] = useState({});
   const [q, setQ] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [resetShopTarget, setResetShopTarget] = useState(null);
 
   useEffect(() => {
     d(ui.actions.fetchRequest({ key: 'shops', url: '/super/shops' }));
@@ -337,11 +339,7 @@ function Shops() {
 
                   <button
                     className="btn-o text-xs py-1.5"
-                    onClick={() => {
-                      if (confirm(`Reset password for ${s.name}? Temporary password will be set.`)) {
-                        d(ui.actions.submitRequest({ url: `/super/shops/${s._id}/reset-password` }));
-                      }
-                    }}
+                    onClick={() => setResetShopTarget(s)}
                   >
                     <KeyRound className="w-3 h-3 text-stone-500" />
                     <span>Reset Pass</span>
@@ -411,11 +409,7 @@ function Shops() {
                       <td className="py-3.5 px-4 text-right">
                         <button
                           className="btn-o text-xs py-1 px-2.5"
-                          onClick={() => {
-                            if (confirm(`Reset password for ${s.name}? Temporary password will be set.`)) {
-                              d(ui.actions.submitRequest({ url: `/super/shops/${s._id}/reset-password` }));
-                            }
-                          }}
+                          onClick={() => setResetShopTarget(s)}
                         >
                           <KeyRound className="w-3.5 h-3.5 text-stone-400" />
                           <span>Reset Password</span>
@@ -432,6 +426,27 @@ function Shops() {
           </div>
         </>
       )}
+
+      {/* Password Reset Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(resetShopTarget)}
+        type="warning"
+        title="Reset Password"
+        message={
+          resetShopTarget
+            ? `Are you sure you want to reset password for "${resetShopTarget.name}"? A temporary password will be set and the owner must change it on their next login.`
+            : ''
+        }
+        confirmText="Reset Password"
+        cancelText="Cancel"
+        onConfirm={() => {
+          if (resetShopTarget) {
+            d(ui.actions.submitRequest({ url: `/super/shops/${resetShopTarget._id}/reset-password` }));
+            setResetShopTarget(null);
+          }
+        }}
+        onClose={() => setResetShopTarget(null)}
+      />
     </Shell>
   );
 }

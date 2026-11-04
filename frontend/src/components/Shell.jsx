@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { auth, ui } from '../redux/slices';
+import ConfirmModal from './Modal';
 import {
   Scissors,
   LogOut,
@@ -70,13 +71,14 @@ export default function Shell({ title, links, children, actions, subtitle }) {
   const location = useLocation();
   const u = useSelector((s) => s.auth.user);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Close mobile drawer when route changes
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  const handleLogout = () => {
+  const confirmLogout = () => {
     d(auth.actions.logout());
     nav('/login');
   };
@@ -145,7 +147,7 @@ export default function Shell({ title, links, children, actions, subtitle }) {
             </div>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutModal(true)}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-stone-400 hover:text-red-400 hover:bg-red-950/30 rounded-xl transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -231,7 +233,10 @@ export default function Shell({ title, links, children, actions, subtitle }) {
                 Logged in as <b className="text-white">{u?.name}</b>
               </div>
               <button
-                onClick={handleLogout}
+                onClick={() => {
+                  setMobileOpen(false);
+                  setShowLogoutModal(true);
+                }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-950/40 text-red-400 text-sm font-medium border border-red-900/50"
               >
                 <LogOut className="w-4 h-4" />
@@ -277,6 +282,19 @@ export default function Shell({ title, links, children, actions, subtitle }) {
           );
         })}
       </nav>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showLogoutModal}
+        type="warning"
+        title="Sign Out Confirmation"
+        message={`Are you sure you want to sign out, ${u?.name || 'User'}? You will need to log in again to access your account.`}
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
+        onConfirm={confirmLogout}
+        onClose={() => setShowLogoutModal(false)}
+      />
 
       <Toast />
     </div>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api, { saveSession, clearSession } from '../api';
-import { fmt } from '../components/Shell';
+import Shell, { fmt } from '../components/Shell';
+import ConfirmModal from '../components/Modal';
 import { StatusBadge } from '../components/Crud';
 import {
   Scissors,
@@ -241,6 +242,8 @@ export default function Customer() {
   const [msg, setMsg] = useState('');
   const [code, setCode] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [cancelBookingTarget, setCancelBookingTarget] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Customer Profile State
   const [profileData, setProfileData] = useState({
@@ -317,10 +320,11 @@ export default function Customer() {
     }
   };
 
-  const cancel = async (id) => {
-    if (confirm('Cancel this booking?')) {
-      await api.patch(`/customer/bookings/${id}/cancel`);
+  const executeCancel = async () => {
+    if (cancelBookingTarget) {
+      await api.patch(`/customer/bookings/${cancelBookingTarget._id}/cancel`);
       loadBookings();
+      setCancelBookingTarget(null);
     }
   };
 
@@ -366,10 +370,7 @@ export default function Customer() {
         </div>
 
         <button
-          onClick={() => {
-            clearSession();
-            location.href = '/login';
-          }}
+          onClick={() => setShowLogoutModal(true)}
           className="flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-900 py-1.5 px-3 rounded-lg hover:bg-stone-100 transition-colors"
         >
           <LogOut className="w-3.5 h-3.5" />
@@ -564,7 +565,7 @@ export default function Customer() {
                   {['pending', 'confirmed'].includes(b.status) && (
                     <button
                       className="btn-danger text-xs py-1.5 px-3 self-end sm:self-center"
-                      onClick={() => cancel(b._id)}
+                      onClick={() => setCancelBookingTarget(b)}
                     >
                       Cancel Booking
                     </button>
@@ -697,6 +698,41 @@ export default function Customer() {
           </div>
         )}
       </main>
+
+      {/* Cancel Booking Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(cancelBookingTarget)}
+        type="danger"
+        title="Cancel Appointment"
+        message={
+          cancelBookingTarget
+            ? `Are you sure you want to cancel your ${cancelBookingTarget.serviceName} booking on ${cancelBookingTarget.date} at ${fmt(
+                cancelBookingTarget.startMin
+              )}?`
+            : ''
+        }
+        confirmText="Yes, Cancel Booking"
+        cancelText="Keep Booking"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
+        onConfirm={executeCancel}
+        onClose={() => setCancelBookingTarget(null)}
+      />
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showLogoutModal}
+        type="warning"
+        title="Sign Out Confirmation"
+        message="Are you sure you want to sign out from your BarberPro client account?"
+        confirmText="Sign Out"
+        cancelText="Stay Signed In"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
+        onConfirm={() => {
+          clearSession();
+          location.href = '/login';
+        }}
+        onClose={() => setShowLogoutModal(false)}
+      />
     </div>
   );
 }
