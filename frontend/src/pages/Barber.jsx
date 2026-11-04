@@ -307,11 +307,10 @@ function Appts() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
-              activeTab === tab.id
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
                 ? 'bg-white text-stone-900 shadow-sm font-semibold'
                 : 'text-stone-600 hover:text-stone-900'
-            }`}
+              }`}
           >
             {tab.label}
           </button>
@@ -596,11 +595,10 @@ function StoreAndProfile() {
       <div className="flex items-center gap-2 border-b border-stone-200 pb-3">
         <button
           onClick={() => setTab('store')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            tab === 'store'
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'store'
               ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
               : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-          }`}
+            }`}
         >
           <Building className="w-4 h-4" />
           <span>Barbershop Details & Hours</span>
@@ -608,11 +606,10 @@ function StoreAndProfile() {
 
         <button
           onClick={() => setTab('profile')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            tab === 'profile'
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'profile'
               ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
               : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-          }`}
+            }`}
         >
           <User className="w-4 h-4" />
           <span>Barber Personal Profile</span>
@@ -805,11 +802,10 @@ function StoreAndProfile() {
                       key={d.idx}
                       type="button"
                       onClick={() => toggleHoliday(d.idx)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        isOff
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${isOff
                           ? 'bg-red-50 text-red-700 border border-red-200 line-through'
                           : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                      }`}
+                        }`}
                     >
                       {d.label} {isOff ? '(Closed)' : '(Open)'}
                     </button>
