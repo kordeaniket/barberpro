@@ -42,11 +42,10 @@ export function Toast() {
   return (
     <div className="fixed top-4 right-4 left-4 sm:left-auto sm:max-w-md z-50 animate-in fade-in slide-in-from-top-4 duration-200">
       <div
-        className={`flex items-start gap-3 p-4 rounded-2xl shadow-float border ${
-          isErr
+        className={`flex items-start gap-3 p-4 rounded-2xl shadow-float border ${isErr
             ? 'bg-red-50/95 border-red-200 text-red-900 backdrop-blur-sm'
             : 'bg-emerald-50/95 border-emerald-200 text-emerald-900 backdrop-blur-sm'
-        }`}
+          }`}
       >
         {isErr ? (
           <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -116,10 +115,9 @@ export default function Shell({ title, links, children, actions, subtitle }) {
                 to={l.to}
                 end={l.end !== false}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                    isActive
-                      ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30 font-semibold'
-                      : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${isActive
+                    ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30 font-semibold'
+                    : 'text-stone-300 hover:bg-stone-800 hover:text-white'
                   }`
                 }
               >
@@ -215,10 +213,9 @@ export default function Shell({ title, links, children, actions, subtitle }) {
                     end={l.end !== false}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all ${
-                        isActive
-                          ? 'bg-amber-600 text-white font-semibold'
-                          : 'text-stone-300 hover:bg-stone-800'
+                      `flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all ${isActive
+                        ? 'bg-amber-600 text-white font-semibold'
+                        : 'text-stone-300 hover:bg-stone-800'
                       }`
                     }
                   >
@@ -270,8 +267,7 @@ export default function Shell({ title, links, children, actions, subtitle }) {
               to={l.to}
               end={l.end !== false}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
-                  isActive ? 'text-amber-600 font-semibold' : 'text-stone-500 hover:text-stone-900'
+                `flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${isActive ? 'text-amber-600 font-semibold' : 'text-stone-500 hover:text-stone-900'
                 }`
               }
             >
