@@ -39,7 +39,7 @@
 .btn-o {
   @apply inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl border border-stone-300/90 
          bg-white text-stone-700 text-sm font-medium hover:bg-stone-50 hover:text-stone-900 active:scale-[0.98] 
-         transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none shadow-xs;
+         transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none shadow-sm;
 }
 
 .btn-danger {
