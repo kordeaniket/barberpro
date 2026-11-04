@@ -6,7 +6,24 @@ const { wrap, need } = require('../utils/helpers');
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const issue = async (u) => {
   const refreshToken = signRefresh(u); u.refreshHash = sha(refreshToken); await u.save();
-  return { token: sign(u), refreshToken, user: { id: u._id, name: u.name, mobile: u.mobile, role: u.role, shopId: u.shopId, mustChangePassword: u.mustChangePassword } };
+  let shop = null;
+  if (u.shopId) {
+    const s = await Shop.findById(u.shopId).select('name logoUrl shopCode city');
+    if (s) shop = { id: s._id, name: s.name, logoUrl: s.logoUrl, shopCode: s.shopCode, city: s.city };
+  }
+  return {
+    token: sign(u),
+    refreshToken,
+    user: {
+      id: u._id,
+      name: u.name,
+      mobile: u.mobile,
+      role: u.role,
+      shopId: u.shopId,
+      mustChangePassword: u.mustChangePassword,
+      shop
+    }
+  };
 };
 r.post('/login', wrap(async (req, res) => {
   need(req.body, ['mobile', 'password']);

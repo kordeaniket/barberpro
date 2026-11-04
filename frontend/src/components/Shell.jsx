@@ -70,13 +70,20 @@ export default function Shell({ title, links, children, actions, subtitle }) {
   const nav = useNavigate();
   const location = useLocation();
   const u = useSelector((s) => s.auth.user);
+  const shopData = useSelector((s) => s.ui.data.shopinfo?.shop);
+  const activeShop = shopData || u?.shop;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [sidebarLogoFailed, setSidebarLogoFailed] = useState(false);
 
   // Close mobile drawer when route changes
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    setSidebarLogoFailed(false);
+  }, [activeShop?.logoUrl]);
 
   const confirmLogout = () => {
     d(auth.actions.logout());
@@ -86,22 +93,42 @@ export default function Shell({ title, links, children, actions, subtitle }) {
   const roleLabel =
     u?.role === 'superadmin' ? 'Super Admin' : u?.role === 'barber' ? 'Barber Store' : 'Customer';
 
+  const isBarber = u?.role === 'barber';
+  const displayTitle = isBarber && activeShop?.name ? activeShop.name : 'BarberPro';
+  const displaySubtitle = isBarber
+    ? activeShop?.shopCode
+      ? `Code: ${activeShop.shopCode}`
+      : 'Barber Store'
+    : roleLabel;
+  const storeLogo = isBarber ? activeShop?.logoUrl : null;
+
   return (
     <div className="min-h-screen bg-stone-50/70 text-stone-900">
       {/* Desktop Sidebar - Fixed, does not scroll with page */}
       <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 h-screen flex-col bg-stone-900 text-stone-200 border-r border-stone-800 select-none z-30">
-        {/* Brand Logo Header */}
-        <div className="p-5 border-b border-stone-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-600/30">
-              <Scissors className="w-5 h-5 rotate-45" />
-            </div>
-            <div>
-              <span className="font-bold text-lg tracking-tight text-white block leading-none">
-                Barber<span className="text-amber-500">Pro</span>
+        {/* Brand Logo Header with Store Logo & Name */}
+        <div className="p-4 sm:p-5 border-b border-stone-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            {storeLogo && !sidebarLogoFailed ? (
+              <div className="w-10 h-10 rounded-xl overflow-hidden border border-amber-500/70 bg-stone-800 shrink-0 shadow-md shadow-amber-600/20">
+                <img
+                  src={storeLogo}
+                  alt={displayTitle}
+                  onError={() => setSidebarLogoFailed(true)}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-600/30 shrink-0">
+                <Scissors className="w-5 h-5 rotate-45" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <span className="font-bold text-base tracking-tight text-white block leading-tight truncate">
+                {displayTitle}
               </span>
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-stone-400 mt-1 block">
-                {roleLabel}
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-stone-400 mt-0.5 block truncate">
+                {displaySubtitle}
               </span>
             </div>
           </div>
@@ -160,12 +187,23 @@ export default function Shell({ title, links, children, actions, subtitle }) {
       <div className="md:pl-64 flex flex-col min-h-screen">
         {/* Mobile Top App Bar */}
       <header className="md:hidden sticky top-0 z-30 bg-stone-900/95 backdrop-blur-md text-white border-b border-stone-800 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-white">
-            <Scissors className="w-4 h-4 rotate-45" />
-          </div>
-          <span className="font-bold text-base tracking-tight text-white">
-            Barber<span className="text-amber-500">Pro</span>
+        <div className="flex items-center gap-2.5 min-w-0">
+          {storeLogo && !sidebarLogoFailed ? (
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-amber-500/70 bg-stone-800 shrink-0">
+              <img
+                src={storeLogo}
+                alt={displayTitle}
+                onError={() => setSidebarLogoFailed(true)}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-white shrink-0">
+              <Scissors className="w-4 h-4 rotate-45" />
+            </div>
+          )}
+          <span className="font-bold text-sm sm:text-base tracking-tight text-white truncate max-w-[180px]">
+            {displayTitle}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -188,20 +226,31 @@ export default function Shell({ title, links, children, actions, subtitle }) {
           />
           <div className="relative w-4/5 max-w-xs bg-stone-900 text-white flex flex-col h-full shadow-2xl z-50 p-4">
             <div className="flex items-center justify-between pb-4 border-b border-stone-800 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white">
-                  <Scissors className="w-4 h-4 rotate-45" />
-                </div>
-                <div>
-                  <span className="font-bold text-base text-white">BarberPro</span>
-                  <span className="text-[10px] block text-stone-400 uppercase tracking-wider">
-                    {roleLabel}
+              <div className="flex items-center gap-2.5 min-w-0">
+                {storeLogo && !sidebarLogoFailed ? (
+                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-amber-500/70 bg-stone-800 shrink-0">
+                    <img
+                      src={storeLogo}
+                      alt={displayTitle}
+                      onError={() => setSidebarLogoFailed(true)}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white shrink-0">
+                    <Scissors className="w-4 h-4 rotate-45" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <span className="font-bold text-sm text-white block truncate">{displayTitle}</span>
+                  <span className="text-[10px] block text-stone-400 uppercase tracking-wider truncate">
+                    {displaySubtitle}
                   </span>
                 </div>
               </div>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800"
+                className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>

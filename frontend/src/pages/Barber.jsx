@@ -6,7 +6,7 @@ import api from '../api';
 import Shell, { fmt } from '../components/Shell';
 import ConfirmModal from '../components/Modal';
 import Crud, { Stat, StatusBadge } from '../components/Crud';
-import { ui } from '../redux/slices';
+import { auth, ui } from '../redux/slices';
 import {
   Home as HomeIcon,
   Calendar,
@@ -607,6 +607,11 @@ function StoreAndProfile() {
           mobile: u.mobile || '',
           avatarUrl: u.avatarUrl || ''
         });
+        d(auth.actions.updateUserShop({
+          name: s.name,
+          logoUrl: s.logoUrl,
+          shopCode: s.shopCode
+        }));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -632,6 +637,10 @@ function StoreAndProfile() {
       url: '/barber/shop',
       body: payload,
       refresh: { key: 'shopinfo', url: '/barber/shop' }
+    }));
+    d(auth.actions.updateUserShop({
+      name: shopForm.name,
+      logoUrl: shopForm.logoUrl
     }));
   };
 
@@ -1076,6 +1085,11 @@ function StoreAndProfile() {
 }
 
 export default function Barber() {
+  const d = useDispatch();
+  useEffect(() => {
+    d(ui.actions.fetchRequest({ key: 'shopinfo', url: '/barber/shop' }));
+  }, [d]);
+
   return (
     <Routes>
       <Route index element={<Home />} />
