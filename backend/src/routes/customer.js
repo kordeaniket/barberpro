@@ -7,7 +7,14 @@ const { emitShop } = require('../sockets');
 const shopByCode = async (code) => Shop.findOne({ shopCode: code, status: 'active' });
 r.get('/public/shop/:code', wrap(async (req, res) => {
   const s = await shopByCode(req.params.code); if (!s) return res.status(404).json({ message: 'Shop not found' });
-  res.json({ shop: { name: s.name, address: s.address, city: s.city, openMin: s.openMin, closeMin: s.closeMin, shopCode: s.shopCode }, services: await Service.find({ shopId: s._id, active: true }) });
+  res.json({
+    shop: {
+      name: s.name, address: s.address, city: s.city, openMin: s.openMin,
+      closeMin: s.closeMin, shopCode: s.shopCode, logoUrl: s.logoUrl,
+      bannerUrl: s.bannerUrl, description: s.description
+    },
+    services: await Service.find({ shopId: s._id, active: true })
+  });
 }));
 r.get('/public/slots', wrap(async (req, res) => {
   const s = await shopByCode(req.query.code); const svc = s && await Service.findOne({ _id: req.query.serviceId, shopId: s._id });
@@ -17,6 +24,34 @@ r.get('/public/slots', wrap(async (req, res) => {
   res.json(genSlots({ openMin: s.openMin, closeMin: s.closeMin, duration: svc.duration, booked }));
 }));
 r.use(auth('customer'));
+
+r.get('/profile', wrap(async (req, res) => {
+  const cust = await Customer.findOne({ shopId: req.shopId, userId: req.user._id });
+  res.json({
+    user: { id: req.user._id, name: req.user.name, mobile: req.user.mobile, email: req.user.email, avatarUrl: req.user.avatarUrl },
+    customer: cust,
+    shop: { name: req.shop.name, city: req.shop.city, shopCode: req.shop.shopCode, logoUrl: req.shop.logoUrl }
+  });
+}));
+
+r.patch('/profile', wrap(async (req, res) => {
+  const { name, email, dob, gender, notes, avatarUrl } = req.body;
+  if (name) req.user.name = name;
+  if (email !== undefined) req.user.email = email;
+  if (avatarUrl !== undefined) req.user.avatarUrl = avatarUrl;
+  await req.user.save();
+  const cust = await Customer.findOneAndUpdate(
+    { shopId: req.shopId, userId: req.user._id },
+    { $set: { ...(name && { name }), ...(email !== undefined && { email }), ...(dob && { dob }), ...(gender && { gender }), ...(notes && { notes }) } },
+    { new: true }
+  );
+  res.json({
+    user: { id: req.user._id, name: req.user.name, mobile: req.user.mobile, email: req.user.email, avatarUrl: req.user.avatarUrl },
+    customer: cust,
+    message: 'Profile updated successfully'
+  });
+}));
+
 r.post('/bookings', wrap(async (req, res) => {
   need(req.body, ['serviceId', 'date', 'startMin']);
   const svc = await Service.findOne({ _id: req.body.serviceId, shopId: req.shopId, active: true });

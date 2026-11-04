@@ -7,7 +7,7 @@ const User = mongoose.model('User', new Schema({
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['superadmin', 'barber', 'customer'], required: true },
   shopId: { ...ref('Shop'), index: true }, mustChangePassword: { type: Boolean, default: false },
-  refreshHash: String, active: { type: Boolean, default: true },
+  refreshHash: String, active: { type: Boolean, default: true }, avatarUrl: String,
 }, T));
 const Plan = mongoose.model('Plan', new Schema({
   name: { type: String, required: true, unique: true }, price: { type: Number, default: 0 },
@@ -21,6 +21,7 @@ const Shop = mongoose.model('Shop', new Schema({
   holidays: [Number], planId: ref('Plan'), subscriptionEnds: Date,
   status: { type: String, enum: ['active', 'inactive', 'suspended'], default: 'active' },
   shopCode: { type: String, unique: true },
+  logoUrl: String, bannerUrl: String, description: String,
 }, T));
 const Service = mongoose.model('Service', new Schema({
   shopId: { ...ref('Shop'), required: true, index: true }, name: { type: String, required: true },

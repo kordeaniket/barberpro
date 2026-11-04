@@ -1,11 +1,41 @@
 const r = require('express').Router();
-const { Customer, Service, Appointment, Invoice } = require('../models');
+const { Shop, User, Customer, Service, Appointment, Invoice } = require('../models');
 const { auth } = require('../middleware/auth');
 const { wrap, pick, need, today } = require('../utils/helpers');
 const { hasConflict } = require('../utils/slots');
 const { emitUser } = require('../sockets');
 const { sendWhatsApp } = require('../services/whatsapp');
 r.use(auth('barber'));
+
+r.get('/profile', wrap(async (req, res) => {
+  const u = req.user;
+  res.json({
+    user: { id: u._id, name: u.name, mobile: u.mobile, email: u.email, role: u.role, avatarUrl: u.avatarUrl },
+    shop: req.shop
+  });
+}));
+
+r.patch('/profile', wrap(async (req, res) => {
+  const { name, email, avatarUrl } = req.body;
+  if (name) req.user.name = name;
+  if (email !== undefined) req.user.email = email;
+  if (avatarUrl !== undefined) req.user.avatarUrl = avatarUrl;
+  await req.user.save();
+  res.json({
+    user: { id: req.user._id, name: req.user.name, mobile: req.user.mobile, email: req.user.email, role: req.user.role, avatarUrl: req.user.avatarUrl },
+    message: 'Profile updated successfully'
+  });
+}));
+
+r.patch('/shop', wrap(async (req, res) => {
+  const allowed = ['name', 'ownerName', 'mobile', 'email', 'address', 'city', 'openMin', 'closeMin', 'holidays', 'logoUrl', 'bannerUrl', 'description'];
+  const updateData = pick(req.body, allowed);
+  if (updateData.openMin !== undefined) updateData.openMin = Number(updateData.openMin);
+  if (updateData.closeMin !== undefined) updateData.closeMin = Number(updateData.closeMin);
+  if (Array.isArray(req.body.holidays)) updateData.holidays = req.body.holidays.map(Number);
+  const shop = await Shop.findByIdAndUpdate(req.shopId, { $set: updateData }, { new: true });
+  res.json({ shop, message: 'Store details updated successfully' });
+}));
 const crud = (path, Model, fields, filter = {}) => {
   r.get(path, wrap(async (req, res) => res.json(await Model.find({ shopId: req.shopId, ...filter }).sort('-createdAt').limit(500))));
   r.post(path, wrap(async (req, res) => res.status(201).json({ data: await Model.create({ ...pick(req.body, fields), shopId: req.shopId }), message: 'Saved' })));

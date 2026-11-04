@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Routes, Route } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import api from '../api';
 import Shell, { fmt } from '../components/Shell';
 import Crud, { Stat, StatusBadge } from '../components/Crud';
 import { ui } from '../redux/slices';
@@ -26,14 +27,22 @@ import {
   Sparkles,
   CalendarDays,
   User,
-  Filter
+  Filter,
+  Settings,
+  Image as ImageIcon,
+  MapPin,
+  Save,
+  Building,
+  KeyRound,
+  ExternalLink
 } from 'lucide-react';
 
 const barberLinks = [
   { to: '/barber', label: 'Dashboard', icon: HomeIcon },
   { to: '/barber/appointments', label: 'Appointments', icon: Calendar },
   { to: '/barber/customers', label: 'Clients', icon: Users },
-  { to: '/barber/services', label: 'Menu & Services', icon: Scissors }
+  { to: '/barber/services', label: 'Menu & Services', icon: Scissors },
+  { to: '/barber/store', label: 'Store & Profile', icon: Settings }
 ];
 
 const fetchAppts = { key: 'appts', url: '/barber/appointments' };
@@ -425,11 +434,560 @@ function Appts() {
   );
 }
 
+const minToTime = (m) => {
+  if (m === undefined || m === null) return '09:00';
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+};
+
+const timeToMin = (t) => {
+  if (!t) return 600;
+  const [h, m] = t.split(':');
+  return parseInt(h, 10) * 60 + parseInt(m, 10);
+};
+
+const DAYS = [
+  { idx: 0, label: 'Sun' },
+  { idx: 1, label: 'Mon' },
+  { idx: 2, label: 'Tue' },
+  { idx: 3, label: 'Wed' },
+  { idx: 4, label: 'Thu' },
+  { idx: 5, label: 'Fri' },
+  { idx: 6, label: 'Sat' }
+];
+
+function StoreAndProfile() {
+  const d = useDispatch();
+  const [tab, setTab] = useState('store'); // 'store' | 'profile'
+  const [shopForm, setShopForm] = useState({
+    name: '',
+    ownerName: '',
+    mobile: '',
+    email: '',
+    address: '',
+    city: '',
+    openTime: '10:00',
+    closeTime: '21:00',
+    holidays: [],
+    logoUrl: '',
+    description: ''
+  });
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    mobile: '',
+    avatarUrl: ''
+  });
+  const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
+  const [showPwModal, setShowPwModal] = useState(false);
+  const [logoImgError, setLogoImgError] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Load shop and profile data
+  useEffect(() => {
+    Promise.all([api.get('/barber/shop'), api.get('/barber/profile')])
+      .then(([shopRes, profRes]) => {
+        const s = shopRes.data.shop || {};
+        const u = profRes.data.user || {};
+        setShopForm({
+          name: s.name || '',
+          ownerName: s.ownerName || '',
+          mobile: s.mobile || '',
+          email: s.email || '',
+          address: s.address || '',
+          city: s.city || '',
+          openTime: minToTime(s.openMin ?? 600),
+          closeTime: minToTime(s.closeMin ?? 1260),
+          holidays: s.holidays || [],
+          logoUrl: s.logoUrl || '',
+          description: s.description || '',
+          shopCode: s.shopCode,
+          customerLink: shopRes.data.customerLink
+        });
+        setUserForm({
+          name: u.name || '',
+          email: u.email || '',
+          mobile: u.mobile || '',
+          avatarUrl: u.avatarUrl || ''
+        });
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const saveShop = (e) => {
+    e.preventDefault();
+    const payload = {
+      name: shopForm.name,
+      ownerName: shopForm.ownerName,
+      mobile: shopForm.mobile,
+      email: shopForm.email,
+      address: shopForm.address,
+      city: shopForm.city,
+      openMin: timeToMin(shopForm.openTime),
+      closeMin: timeToMin(shopForm.closeTime),
+      holidays: shopForm.holidays,
+      logoUrl: shopForm.logoUrl,
+      description: shopForm.description
+    };
+    d(ui.actions.submitRequest({
+      method: 'patch',
+      url: '/barber/shop',
+      body: payload,
+      refresh: { key: 'shopinfo', url: '/barber/shop' }
+    }));
+  };
+
+  const saveUser = (e) => {
+    e.preventDefault();
+    d(ui.actions.submitRequest({
+      method: 'patch',
+      url: '/barber/profile',
+      body: { name: userForm.name, email: userForm.email, avatarUrl: userForm.avatarUrl }
+    }));
+    // Sync localStorage session name
+    const current = JSON.parse(localStorage.getItem('user') || '{}');
+    localStorage.setItem('user', JSON.stringify({ ...current, name: userForm.name, email: userForm.email }));
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (pwForm.newPassword.length < 8) {
+      d(ui.actions.setMsg({ type: 'error', text: 'Password must be at least 8 characters long.' }));
+      return;
+    }
+    if (pwForm.newPassword !== pwForm.confirm) {
+      d(ui.actions.setMsg({ type: 'error', text: 'Passwords do not match.' }));
+      return;
+    }
+    try {
+      await api.post('/auth/change-password', { newPassword: pwForm.newPassword });
+      d(ui.actions.setMsg({ type: 'ok', text: 'Password successfully changed!' }));
+      setShowPwModal(false);
+      setPwForm({ newPassword: '', confirm: '' });
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Failed to update password' }));
+    }
+  };
+
+  const toggleHoliday = (dayIdx) => {
+    const list = shopForm.holidays || [];
+    const exists = list.includes(dayIdx);
+    const updated = exists ? list.filter((x) => x !== dayIdx) : [...list, dayIdx];
+    setShopForm({ ...shopForm, holidays: updated });
+  };
+
+  if (loading) {
+    return (
+      <Shell title="Store & Profile" subtitle="Manage barbershop profile and business settings" links={barberLinks}>
+        <div className="card text-center py-12 text-stone-400 text-sm">Loading configuration...</div>
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell
+      title="Store & Profile Management"
+      subtitle="Customize your barbershop details, logo, operating hours, and personal profile"
+      links={barberLinks}
+    >
+      {/* Top Tabs */}
+      <div className="flex items-center gap-2 border-b border-stone-200 pb-3">
+        <button
+          onClick={() => setTab('store')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            tab === 'store'
+              ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
+              : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+          }`}
+        >
+          <Building className="w-4 h-4" />
+          <span>Barbershop Details & Hours</span>
+        </button>
+
+        <button
+          onClick={() => setTab('profile')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            tab === 'profile'
+              ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
+              : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+          }`}
+        >
+          <User className="w-4 h-4" />
+          <span>Barber Personal Profile</span>
+        </button>
+      </div>
+
+      {/* Tab 1: Store Configuration */}
+      {tab === 'store' && (
+        <form onSubmit={saveShop} className="space-y-6 animate-in fade-in duration-150">
+          {/* Logo & Identity Preview Card */}
+          <div className="card p-5 space-y-4">
+            <h3 className="font-bold text-base text-stone-900 flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-amber-600" />
+              <span>Store Brand & Logo</span>
+            </h3>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="w-20 h-20 rounded-2xl bg-stone-100 border-2 border-dashed border-stone-300 flex items-center justify-center overflow-hidden shrink-0">
+                {shopForm.logoUrl && !logoImgError ? (
+                  <img
+                    src={shopForm.logoUrl}
+                    alt="Store Logo"
+                    onError={() => setLogoImgError(true)}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center p-2 text-stone-400">
+                    <Scissors className="w-6 h-6 mx-auto mb-1 opacity-50" />
+                    <span className="text-[10px] block">No logo</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 w-full space-y-1.5">
+                <label className="text-xs font-semibold text-stone-600">Logo Image URL</label>
+                <input
+                  type="url"
+                  className="inp"
+                  placeholder="https://example.com/logo.png"
+                  value={shopForm.logoUrl}
+                  onChange={(e) => {
+                    setLogoImgError(false);
+                    setShopForm({ ...shopForm, logoUrl: e.target.value });
+                  }}
+                />
+                <p className="text-[11px] text-stone-500">
+                  Provide a direct web image link (PNG, JPG, SVG). Displayed on your public booking page.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Basic Store Info */}
+          <div className="card p-5 space-y-4">
+            <h3 className="font-bold text-base text-stone-900 flex items-center gap-2">
+              <Store className="w-5 h-5 text-amber-600" />
+              <span>General Store Information</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Shop Name *</label>
+                <input
+                  className="inp"
+                  required
+                  value={shopForm.name}
+                  onChange={(e) => setShopForm({ ...shopForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Owner Name *</label>
+                <input
+                  className="inp"
+                  required
+                  value={shopForm.ownerName}
+                  onChange={(e) => setShopForm({ ...shopForm, ownerName: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Shop Code (Unique ID)</label>
+                <input
+                  className="inp bg-stone-100 text-stone-500 font-mono"
+                  readOnly
+                  disabled
+                  value={shopForm.shopCode || ''}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Store Contact Mobile *</label>
+                <input
+                  className="inp"
+                  required
+                  value={shopForm.mobile}
+                  onChange={(e) => setShopForm({ ...shopForm, mobile: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Store Email</label>
+                <input
+                  className="inp"
+                  type="email"
+                  value={shopForm.email}
+                  onChange={(e) => setShopForm({ ...shopForm, email: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">City</label>
+                <input
+                  className="inp"
+                  value={shopForm.city}
+                  onChange={(e) => setShopForm({ ...shopForm, city: e.target.value })}
+                />
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-3 space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Full Store Address</label>
+                <input
+                  className="inp"
+                  placeholder="e.g. Shop 4, High Street Road, Near Metro Station"
+                  value={shopForm.address}
+                  onChange={(e) => setShopForm({ ...shopForm, address: e.target.value })}
+                />
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-3 space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Store Tagline / Bio</label>
+                <input
+                  className="inp"
+                  placeholder="e.g. Premium haircuts, beard grooming, and facial spa treatments."
+                  value={shopForm.description}
+                  onChange={(e) => setShopForm({ ...shopForm, description: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Operating Hours & Holidays */}
+          <div className="card p-5 space-y-4">
+            <h3 className="font-bold text-base text-stone-900 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-600" />
+              <span>Operating Hours & Weekly Offs</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Opening Time</label>
+                <input
+                  type="time"
+                  className="inp"
+                  value={shopForm.openTime}
+                  onChange={(e) => setShopForm({ ...shopForm, openTime: e.target.value })}
+                />
+                <span className="text-[11px] text-stone-400 block">
+                  Current: {fmt(timeToMin(shopForm.openTime))}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Closing Time</label>
+                <input
+                  type="time"
+                  className="inp"
+                  value={shopForm.closeTime}
+                  onChange={(e) => setShopForm({ ...shopForm, closeTime: e.target.value })}
+                />
+                <span className="text-[11px] text-stone-400 block">
+                  Current: {fmt(timeToMin(shopForm.closeTime))}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-stone-100 space-y-2">
+              <label className="text-xs font-semibold text-stone-600 block">
+                Weekly Off Days (Holidays)
+              </label>
+              <p className="text-[11px] text-stone-500">
+                Click a day to mark it as closed. Customers will not be able to book on these days.
+              </p>
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                {DAYS.map((d) => {
+                  const isOff = (shopForm.holidays || []).includes(d.idx);
+                  return (
+                    <button
+                      key={d.idx}
+                      type="button"
+                      onClick={() => toggleHoliday(d.idx)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        isOff
+                          ? 'bg-red-50 text-red-700 border border-red-200 line-through'
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                      }`}
+                    >
+                      {d.label} {isOff ? '(Closed)' : '(Open)'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <div className="flex justify-end">
+            <button type="submit" className="btn-brand px-6 py-2.5">
+              <Save className="w-4 h-4" />
+              <span>Save Store Settings</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Tab 2: Barber Personal Profile */}
+      {tab === 'profile' && (
+        <form onSubmit={saveUser} className="space-y-6 animate-in fade-in duration-150">
+          <div className="card p-5 space-y-4">
+            <h3 className="font-bold text-base text-stone-900 flex items-center gap-2">
+              <User className="w-5 h-5 text-amber-600" />
+              <span>Personal Account Information</span>
+            </h3>
+
+            <div className="flex items-center gap-4 pb-2 border-b border-stone-100">
+              <div className="w-16 h-16 rounded-2xl bg-stone-900 text-amber-400 flex items-center justify-center font-bold text-xl overflow-hidden shrink-0 border border-stone-800">
+                {userForm.avatarUrl ? (
+                  <img src={userForm.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{userForm.name ? userForm.name[0].toUpperCase() : 'B'}</span>
+                )}
+              </div>
+              <div>
+                <h4 className="font-bold text-stone-900 text-base">{userForm.name || 'Barber'}</h4>
+                <p className="text-xs text-stone-500 font-mono">{userForm.mobile}</p>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 mt-1 inline-block">
+                  Store Owner Account
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Your Full Name *</label>
+                <input
+                  className="inp"
+                  required
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Registered Mobile (Login ID)</label>
+                <input
+                  className="inp bg-stone-100 text-stone-500 font-mono"
+                  readOnly
+                  disabled
+                  value={userForm.mobile}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Personal Email</label>
+                <input
+                  className="inp"
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-600">Avatar Image URL</label>
+                <input
+                  className="inp"
+                  placeholder="https://example.com/avatar.jpg"
+                  value={userForm.avatarUrl}
+                  onChange={(e) => setUserForm({ ...userForm, avatarUrl: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-stone-100 flex items-center justify-between flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPwModal(true)}
+                className="btn-o text-xs py-2 px-3"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Change Password</span>
+              </button>
+
+              <button type="submit" className="btn-brand px-6 py-2.5">
+                <Save className="w-4 h-4" />
+                <span>Save Profile</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
+      {/* Change Password Modal */}
+      {showPwModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-sm animate-in fade-in">
+          <form
+            onSubmit={handlePasswordChange}
+            className="card max-w-sm w-full space-y-4 shadow-float border border-stone-200"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+              <h3 className="font-bold text-stone-900 text-sm flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-amber-600" />
+                <span>Update Password</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPwModal(false)}
+                className="p-1 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-700"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-stone-600">New Password (min 8 chars) *</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                className="inp"
+                placeholder="••••••••"
+                value={pwForm.newPassword}
+                onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-stone-600">Confirm New Password *</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                className="inp"
+                placeholder="••••••••"
+                value={pwForm.confirm}
+                onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="btn-o"
+                onClick={() => setShowPwModal(false)}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="btn-brand">
+                Save Password
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </Shell>
+  );
+}
+
 export default function Barber() {
   return (
     <Routes>
       <Route index element={<Home />} />
       <Route path="appointments" element={<Appts />} />
+      <Route path="store" element={<StoreAndProfile />} />
       <Route
         path="customers"
         element={
