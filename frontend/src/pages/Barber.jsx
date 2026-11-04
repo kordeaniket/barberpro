@@ -497,11 +497,10 @@ function Appts() {
                 key={m.id}
                 type="button"
                 onClick={() => setPayMethod(m.id)}
-                className={`py-2 px-3 rounded-xl border text-center transition-all ${
-                  payMethod === m.id
-                    ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold ring-1 ring-amber-600'
-                    : 'border-stone-200 hover:border-stone-300 text-stone-700'
-                }`}
+                className={`py-2 px-3 rounded-xl border text-center transition-all ${payMethod === m.id
+                  ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold ring-1 ring-amber-600'
+                  : 'border-stone-200 hover:border-stone-300 text-stone-700'
+                  }`}
               >
                 {m.label}
               </button>

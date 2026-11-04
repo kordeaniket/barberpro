@@ -87,11 +87,11 @@ export default function Shell({ title, links, children, actions, subtitle }) {
     u?.role === 'superadmin' ? 'Super Admin' : u?.role === 'barber' ? 'Barber Store' : 'Customer';
 
   return (
-    <div className="min-h-screen bg-stone-50/70 flex flex-col md:flex-row text-stone-900">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-stone-900 text-stone-200 border-r border-stone-800 select-none">
+    <div className="min-h-screen bg-stone-50/70 text-stone-900">
+      {/* Desktop Sidebar - Fixed, does not scroll with page */}
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 h-screen flex-col bg-stone-900 text-stone-200 border-r border-stone-800 select-none z-30">
         {/* Brand Logo Header */}
-        <div className="p-5 border-b border-stone-800 flex items-center justify-between">
+        <div className="p-5 border-b border-stone-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-600/30">
               <Scissors className="w-5 h-5 rotate-45" />
@@ -107,8 +107,8 @@ export default function Shell({ title, links, children, actions, subtitle }) {
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {/* Navigation Links - no visible scrollbar */}
+        <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {links.map((l) => {
             const Icon = l.icon;
             return (
@@ -136,7 +136,7 @@ export default function Shell({ title, links, children, actions, subtitle }) {
         </nav>
 
         {/* User Profile Card & Logout */}
-        <div className="p-3 border-t border-stone-800 bg-stone-950/40">
+        <div className="p-3 border-t border-stone-800 bg-stone-950/40 shrink-0">
           <div className="flex items-center gap-3 p-2 rounded-xl mb-1">
             <div className="w-9 h-9 rounded-xl bg-stone-800 border border-stone-700 flex items-center justify-center text-amber-400 font-semibold text-sm shrink-0">
               {u?.name ? u.name[0].toUpperCase() : <User className="w-4 h-4" />}
@@ -156,7 +156,9 @@ export default function Shell({ title, links, children, actions, subtitle }) {
         </div>
       </aside>
 
-      {/* Mobile Top App Bar */}
+      {/* Main Content Area - offset for fixed sidebar on desktop */}
+      <div className="md:pl-64 flex flex-col min-h-screen">
+        {/* Mobile Top App Bar */}
       <header className="md:hidden sticky top-0 z-30 bg-stone-900/95 backdrop-blur-md text-white border-b border-stone-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-white">
@@ -282,6 +284,7 @@ export default function Shell({ title, links, children, actions, subtitle }) {
           );
         })}
       </nav>
+      </div>
 
       {/* Logout Confirmation Modal */}
       <ConfirmModal
