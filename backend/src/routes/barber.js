@@ -272,7 +272,7 @@ r.get('/appointments', wrap(async (req, res) => {
   if (req.query.calendar === 'true' || req.query.all === 'true') {
     const list = await Appointment.find({ shopId: req.shopId })
       .populate('customerId', 'name mobile email')
-      .sort('-date -startMin');
+      .sort(req.query.sort || '-createdAt');
     return res.json(list);
   }
 
@@ -316,7 +316,7 @@ r.get('/appointments', wrap(async (req, res) => {
     Appointment.countDocuments(query),
     Appointment.find(query)
       .populate('customerId', 'name mobile email')
-      .sort('-date -startMin')
+      .sort(req.query.sort || '-createdAt')
       .skip(skip)
       .limit(limit)
   ]);

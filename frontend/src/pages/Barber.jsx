@@ -580,7 +580,8 @@ function Appts() {
       const params = {
         page,
         limit,
-        paginate: 'true'
+        paginate: 'true',
+        sort: '-createdAt'
       };
       if (statusFilter !== 'all') params.status = statusFilter;
       if (dateFilter === 'today') {
@@ -602,8 +603,9 @@ function Appts() {
         setTotalCount(res.data.total || 0);
         setTotalPages(res.data.totalPages || 1);
       } else if (Array.isArray(res.data)) {
-        setTableData(res.data);
-        setTotalCount(res.data.length);
+        const sorted = [...res.data].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        setTableData(sorted);
+        setTotalCount(sorted.length);
         setTotalPages(1);
       }
     } catch (err) {
@@ -1018,12 +1020,12 @@ function Appts() {
               <table className="w-full min-w-[850px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-200 text-stone-600 font-semibold uppercase tracking-wider text-[11px]">
+                    <th className="py-3.5 px-4 text-left">Actions</th>
                     <th className="py-3.5 px-4">Client</th>
                     <th className="py-3.5 px-4">Service & Duration</th>
                     <th className="py-3.5 px-4">Date & Slot</th>
                     <th className="py-3.5 px-4">Amount</th>
                     <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
 
@@ -1057,80 +1059,9 @@ function Appts() {
                           key={a._id}
                           className="hover:bg-amber-50/30 transition-colors"
                         >
-                          {/* Client */}
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center shrink-0 text-xs">
-                                {a.customerId?.name
-                                  ? a.customerId.name[0].toUpperCase()
-                                  : 'C'}
-                              </div>
-
-                              <div>
-                                <span className="font-bold text-stone-900 block leading-tight">
-                                  {a.customerId?.name || 'Walk-In Client'}
-                                </span>
-
-                                {a.customerId?.mobile && (
-                                  <a
-                                    href={`tel:${a.customerId.mobile}`}
-                                    className="text-[11px] text-stone-500 hover:text-amber-700 flex items-center gap-1 mt-0.5"
-                                  >
-                                    <Phone className="w-3 h-3" />
-                                    <span>{a.customerId.mobile}</span>
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Services & Duration */}
-                          <td className="py-3.5 px-4">
-                            <div>
-                              <span className="font-semibold text-stone-900 block leading-tight">
-                                {a.serviceName}
-                              </span>
-
-                              <span className="text-[11px] text-stone-500 flex items-center gap-1 mt-0.5">
-                                <Clock className="w-3 h-3 text-stone-400" />
-                                <span>{duration} mins approx</span>
-                                {a.staffName && (
-                                  <span className="text-amber-700 font-medium">
-                                    • {a.staffName}
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* Date & Slot */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className="font-bold text-stone-800 block text-xs">
-                              {a.date}
-                            </span>
-                            <span className="text-[11px] text-stone-500">
-                              {fmt(a.startMin)} – {fmt(a.endMin)}
-                            </span>
-                          </td>
-
-                          {/* Amount */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className="font-extrabold text-stone-900 block text-xs">
-                              ₹{a.price}
-                            </span>
-                            <span className="text-[10px] text-stone-400 uppercase font-semibold">
-                              {a.source === 'online' ? 'Online' : 'Walk-in'}
-                            </span>
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <StatusBadge status={a.status} />
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-1.5">
+                          {/* Actions - At Start of Row */}
+                          <td className="py-3.5 px-4 text-left whitespace-nowrap">
+                            <div className="flex items-center justify-start gap-1.5">
                               {a.status === 'pending' && (
                                 <>
                                   <button
@@ -1206,6 +1137,77 @@ function Appts() {
                                 </span>
                               )}
                             </div>
+                          </td>
+
+                          {/* Client */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center shrink-0 text-xs">
+                                {a.customerId?.name
+                                  ? a.customerId.name[0].toUpperCase()
+                                  : 'C'}
+                              </div>
+
+                              <div>
+                                <span className="font-bold text-stone-900 block leading-tight">
+                                  {a.customerId?.name || 'Walk-In Client'}
+                                </span>
+
+                                {a.customerId?.mobile && (
+                                  <a
+                                    href={`tel:${a.customerId.mobile}`}
+                                    className="text-[11px] text-stone-500 hover:text-amber-700 flex items-center gap-1 mt-0.5"
+                                  >
+                                    <Phone className="w-3 h-3" />
+                                    <span>{a.customerId.mobile}</span>
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Services & Duration */}
+                          <td className="py-3.5 px-4">
+                            <div>
+                              <span className="font-semibold text-stone-900 block leading-tight">
+                                {a.serviceName}
+                              </span>
+
+                              <span className="text-[11px] text-stone-500 flex items-center gap-1 mt-0.5">
+                                <Clock className="w-3 h-3 text-stone-400" />
+                                <span>{duration} mins approx</span>
+                                {a.staffName && (
+                                  <span className="text-amber-700 font-medium">
+                                    • {a.staffName}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Date & Slot */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span className="font-bold text-stone-800 block text-xs">
+                              {a.date}
+                            </span>
+                            <span className="text-[11px] text-stone-500">
+                              {fmt(a.startMin)} – {fmt(a.endMin)}
+                            </span>
+                          </td>
+
+                          {/* Amount */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span className="font-extrabold text-stone-900 block text-xs">
+                              ₹{a.price}
+                            </span>
+                            <span className="text-[10px] text-stone-400 uppercase font-semibold">
+                              {a.source === 'online' ? 'Online' : 'Walk-in'}
+                            </span>
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <StatusBadge status={a.status} />
                           </td>
                         </tr>
                       );
