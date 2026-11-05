@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { auth, ui } from '../redux/slices';
+import { io } from 'socket.io-client';
+import api from '../api';
+import { auth, ui, notifications } from '../redux/slices';
 import ConfirmModal from './Modal';
 import {
   Scissors,
@@ -13,7 +15,13 @@ import {
   ShieldCheck,
   User,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Bell,
+  CheckCheck,
+  Trash2,
+  Clock,
+  Sparkles,
+  CalendarCheck
 } from 'lucide-react';
 
 export const fmt = (m) => {
@@ -24,6 +32,225 @@ export const fmt = (m) => {
   const displayH = h % 12 || 12;
   return `${displayH}:${String(min).padStart(2, '0')} ${ampm}`;
 };
+
+function playNotificationChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(659.25, now);
+    gain1.gain.setValueAtTime(0.18, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.35);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(987.77, now + 0.12);
+    gain2.gain.setValueAtTime(0.2, now + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.12);
+    osc2.stop(now + 0.55);
+  } catch (err) {
+    // Audio context may require prior user interaction
+  }
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return 'Just now';
+  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function NotificationMenu({ isMobile = false }) {
+  const d = useDispatch();
+  const nav = useNavigate();
+  const notifs = useSelector((s) => s.notifications?.items) || [];
+  const unreadCount = useSelector((s) => s.notifications?.unreadCount) || 0;
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [open]);
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`relative p-2 rounded-xl transition-all ${
+          isMobile
+            ? 'bg-stone-800 hover:bg-stone-700 text-stone-200'
+            : 'border border-stone-200/90 bg-white hover:bg-stone-50 text-stone-700 shadow-sm'
+        }`}
+        title="Real-Time Booking Notifications"
+        aria-label="View notifications"
+      >
+        <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-amber-600 text-white font-extrabold text-[10px] w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white animate-pulse">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-stone-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          {/* Header */}
+          <div className="p-3.5 bg-stone-50 border-b border-stone-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-amber-600" />
+              <span className="font-bold text-stone-900 text-sm">Booking Alerts</span>
+              {unreadCount > 0 && (
+                <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                  {unreadCount} new
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => d(notifications.actions.markAllAsRead())}
+                  className="p-1 rounded-lg hover:bg-stone-200 text-stone-600 text-xs flex items-center gap-1 font-medium"
+                  title="Mark all as read"
+                >
+                  <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="hidden sm:inline">Mark all read</span>
+                </button>
+              )}
+              {notifs.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => d(notifications.actions.clearAll())}
+                  className="p-1 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-600 text-xs flex items-center gap-1"
+                  title="Clear all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Notifications List */}
+          <div className="max-h-80 overflow-y-auto divide-y divide-stone-100">
+            {notifs.length === 0 ? (
+              <div className="p-8 text-center text-xs text-stone-400 space-y-1">
+                <Bell className="w-8 h-8 text-stone-300 mx-auto mb-1 stroke-1" />
+                <p className="font-semibold text-stone-700">No notifications yet</p>
+                <p className="text-[11px] text-stone-400">
+                  New appointment bookings will alert you in real-time here.
+                </p>
+              </div>
+            ) : (
+              notifs.map((n) => {
+                const isCancellation = n.type === 'cancellation';
+                const isCompleted = n.type === 'completed';
+
+                return (
+                  <div
+                    key={n.id}
+                    onClick={() => {
+                      d(notifications.actions.markAsRead(n.id));
+                      setOpen(false);
+                      nav('/barber/appointments');
+                    }}
+                    className={`p-3.5 transition-colors cursor-pointer flex items-start gap-3 hover:bg-stone-50 ${
+                      !n.read ? 'bg-amber-50/50' : ''
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        isCancellation
+                          ? 'bg-red-100 text-red-700'
+                          : isCompleted
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {isCancellation ? (
+                        <AlertCircle className="w-4 h-4" />
+                      ) : isCompleted ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : (
+                        <Scissors className="w-4 h-4 rotate-45" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-stone-900 text-xs truncate">
+                          {n.title}
+                        </span>
+                        <span className="text-[10px] text-stone-400 shrink-0">
+                          {timeAgo(n.timestamp)}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed">
+                        {n.message}
+                      </p>
+
+                      {n.date && (
+                        <div className="flex items-center gap-2 text-[10px] text-stone-500 font-medium">
+                          <span>📅 {n.date}</span>
+                          {n.time && <span>• ⏰ {n.time}</span>}
+                          {n.price && <span className="font-bold text-amber-800">• ₹{n.price}</span>}
+                        </div>
+                      )}
+                    </div>
+
+                    {!n.read && (
+                      <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0 mt-1.5" />
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer View Appointments */}
+          <div className="p-2.5 bg-stone-50 border-t border-stone-200 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                nav('/barber/appointments');
+              }}
+              className="text-xs font-semibold text-amber-700 hover:text-amber-900 inline-flex items-center gap-1"
+            >
+              <span>View Appointment Manager</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Toast() {
   const m = useSelector((s) => s.ui.msg);
@@ -101,6 +328,53 @@ export default function Shell({ title, links, children, actions, subtitle }) {
       : 'Barber Store'
     : roleLabel;
   const storeLogo = isBarber ? activeShop?.logoUrl : null;
+
+  // Real-time Socket.IO connection for Barber booking notifications
+  useEffect(() => {
+    if (!isBarber) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Load recent notifications from backend
+    api
+      .get('/barber/notifications')
+      .then((res) => {
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          d(notifications.actions.setNotifications(res.data));
+        }
+      })
+      .catch(() => {});
+
+    const socket = io({ auth: { token } });
+
+    socket.on('booking:new', (data) => {
+      d(notifications.actions.addNotification(data));
+      playNotificationChime();
+      d(
+        ui.actions.setMsg({
+          type: 'ok',
+          text: `🔔 New Booking: ${data.customer} booked ${data.serviceName}!`
+        })
+      );
+      // Automatically refresh live dashboard & appointments data
+      d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
+      d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
+    });
+
+    socket.on('booking:cancelled', (data) => {
+      d(notifications.actions.addNotification(data));
+      d(
+        ui.actions.setMsg({
+          type: 'error',
+          text: `⚠️ Booking Cancelled: ${data.customer} (${data.serviceName})`
+        })
+      );
+      d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
+      d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
+    });
+
+    return () => socket.close();
+  }, [isBarber, d]);
 
   return (
     <div className="min-h-screen bg-stone-50/70 text-stone-900">
@@ -207,6 +481,7 @@ export default function Shell({ title, links, children, actions, subtitle }) {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {isBarber && <NotificationMenu isMobile={true} />}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 transition-colors"
@@ -306,7 +581,10 @@ export default function Shell({ title, links, children, actions, subtitle }) {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">{title}</h1>
             {subtitle && <p className="text-xs sm:text-sm text-stone-500 mt-0.5">{subtitle}</p>}
           </div>
-          {actions && <div className="flex items-center gap-2.5 flex-wrap">{actions}</div>}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {isBarber && <NotificationMenu />}
+            {actions}
+          </div>
         </div>
 
         {/* Page Inner Container */}

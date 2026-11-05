@@ -189,4 +189,46 @@ r.post('/invoices', wrap(async (req, res) => {
   res.status(201).json({ data: inv, message: 'Bill generated: ₹' + total });
 }));
 r.get('/invoices', wrap(async (req, res) => res.json(await Invoice.find({ shopId: req.shopId }).populate('customerId', 'name').sort('-createdAt').limit(200))));
+
+r.get('/notifications', wrap(async (req, res) => {
+  const recent = await Appointment.find({ shopId: req.shopId })
+    .populate('customerId', 'name mobile')
+    .sort('-createdAt')
+    .limit(25);
+
+  const notifs = recent.map((a) => {
+    const startH = Math.floor(a.startMin / 60);
+    const startM = a.startMin % 60;
+    const timeStr = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+    const custName = a.customerId?.name || 'Walk-In';
+
+    let title = 'New Online Booking';
+    let type = 'booking';
+    if (a.status === 'cancelled' || a.status === 'rejected') {
+      title = 'Appointment Cancelled';
+      type = 'cancellation';
+    } else if (a.status === 'completed') {
+      title = 'Service Completed';
+      type = 'completed';
+    }
+
+    return {
+      id: a._id.toString(),
+      title,
+      customer: custName,
+      serviceName: a.serviceName,
+      price: a.price,
+      date: a.date,
+      time: timeStr,
+      startMin: a.startMin,
+      status: a.status,
+      type,
+      message: `${custName} • ${a.serviceName} on ${a.date} at ${timeStr} (₹${a.price})`,
+      timestamp: a.createdAt || new Date().toISOString()
+    };
+  });
+
+  res.json(notifs);
+}));
+
 module.exports = r;

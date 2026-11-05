@@ -115,7 +115,27 @@ r.post('/bookings', wrap(async (req, res) => {
     source: 'online'
   });
 
-  emitShop(req.shopId, 'booking:new', { id: a._id, customer: cust.name, date: a.date, startMin: a.startMin });
+  const startH = Math.floor(start / 60);
+  const startM = start % 60;
+  const timeFormatted = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+
+  emitShop(req.shopId, 'booking:new', {
+    id: a._id.toString(),
+    title: 'New Online Booking',
+    customer: cust.name,
+    mobile: cust.mobile,
+    serviceName: serviceNames,
+    duration: totalDuration,
+    price: totalPrice,
+    date: a.date,
+    startMin: start,
+    endMin: end,
+    time: timeFormatted,
+    message: `${cust.name} booked ${serviceNames} for ${a.date} at ${timeFormatted} (₹${totalPrice})`,
+    type: 'booking',
+    timestamp: new Date().toISOString()
+  });
+
   res.status(201).json({ data: a, message: `Booking request sent for ${serviceNames} (${totalDuration}m, ₹${totalPrice}).` });
 }));
 r.get('/bookings', wrap(async (req, res) => {
@@ -126,7 +146,25 @@ r.patch('/bookings/:id/cancel', wrap(async (req, res) => {
   const c = await Customer.findOne({ shopId: req.shopId, userId: req.user._id });
   const a = await Appointment.findOne({ _id: req.params.id, shopId: req.shopId, customerId: c?._id });
   if (!a) return res.status(404).json({ message: 'Not found' });
-  a.status = 'cancelled'; await a.save(); emitShop(req.shopId, 'booking:cancelled', { id: a._id });
+  a.status = 'cancelled'; await a.save();
+
+  const startH = Math.floor(a.startMin / 60);
+  const startM = a.startMin % 60;
+  const timeFormatted = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+
+  emitShop(req.shopId, 'booking:cancelled', {
+    id: a._id.toString(),
+    title: 'Appointment Cancelled',
+    customer: c?.name || 'Customer',
+    serviceName: a.serviceName,
+    date: a.date,
+    startMin: a.startMin,
+    time: timeFormatted,
+    message: `${c?.name || 'Customer'} cancelled their booking for ${a.serviceName} on ${a.date} at ${timeFormatted}`,
+    type: 'cancellation',
+    timestamp: new Date().toISOString()
+  });
+
   res.json({ data: a, message: 'Booking cancelled' });
 }));
 module.exports = r;

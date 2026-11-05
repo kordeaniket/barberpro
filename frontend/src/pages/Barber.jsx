@@ -51,7 +51,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 
 const barberLinks = [
@@ -65,18 +66,7 @@ const barberLinks = [
 const fetchAppts = { key: 'appts', url: '/barber/appointments' };
 
 function useLive() {
-  const d = useDispatch();
-  useEffect(() => {
-    const s = io({ auth: { token: localStorage.getItem('token') } });
-    const ping = (text) => () => {
-      d(ui.actions.setMsg({ type: 'ok', text }));
-      d(ui.actions.fetchRequest(fetchAppts));
-      d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
-    };
-    s.on('booking:new', ping('New booking request received!'));
-    s.on('booking:cancelled', ping('A client cancelled their appointment'));
-    return () => s.close();
-  }, [d]);
+  // Real-time socket events & notifications are handled globally by Shell
 }
 
 function Home() {
@@ -243,7 +233,7 @@ function Appts() {
     try {
       const res = await api.get('/barber/appointments', { params: { calendar: 'true' } });
       const rawList = Array.isArray(res.data) ? res.data : (res.data?.appointments || []);
-      
+
       const mapped = rawList.map((a) => {
         const [y, m, d] = (a.date || new Date().toISOString().slice(0, 10)).split('-').map(Number);
         const sH = Math.floor(a.startMin / 60);
@@ -489,11 +479,10 @@ function Appts() {
                     type="button"
                     key={s._id}
                     onClick={() => toggleWalkInService(s._id)}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-xs ${
-                      isChecked
+                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-xs ${isChecked
                         ? 'border-amber-600 bg-amber-50 text-amber-950 font-bold ring-1 ring-amber-600/50'
                         : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
-                    }`}
+                      }`}
                   >
                     <div>
                       <span className="block truncate">{s.name}</span>
@@ -528,22 +517,20 @@ function Appts() {
         <div className="flex items-center gap-2 p-1 bg-stone-200/70 rounded-2xl w-fit">
           <button
             onClick={() => setViewMode('table')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-              viewMode === 'table'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${viewMode === 'table'
                 ? 'bg-white text-stone-900 shadow-sm'
                 : 'text-stone-600 hover:text-stone-900'
-            }`}
+              }`}
           >
             <Table className="w-4 h-4 text-amber-600" />
             <span>Table View (Paginated)</span>
           </button>
           <button
             onClick={() => setViewMode('calendar')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-              viewMode === 'calendar'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${viewMode === 'calendar'
                 ? 'bg-white text-stone-900 shadow-sm'
                 : 'text-stone-600 hover:text-stone-900'
-            }`}
+              }`}
           >
             <Calendar className="w-4 h-4 text-amber-600" />
             <span>Calendar Planner (Syncfusion)</span>
@@ -842,11 +829,10 @@ function Appts() {
                       key={pNum}
                       type="button"
                       onClick={() => setPage(pNum)}
-                      className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${
-                        page === pNum
+                      className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${page === pNum
                           ? 'bg-amber-600 text-white shadow-xs'
                           : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-300'
-                      }`}
+                        }`}
                     >
                       {pNum}
                     </button>
@@ -1087,11 +1073,10 @@ function Appts() {
                 key={m.id}
                 type="button"
                 onClick={() => setPayMethod(m.id)}
-                className={`py-2 px-3 rounded-xl border text-center transition-all ${
-                  payMethod === m.id
+                className={`py-2 px-3 rounded-xl border text-center transition-all ${payMethod === m.id
                     ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold ring-1 ring-amber-600'
                     : 'border-stone-200 hover:border-stone-300 text-stone-700'
-                }`}
+                  }`}
               >
                 {m.label}
               </button>

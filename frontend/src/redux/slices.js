@@ -17,3 +17,61 @@ export const auth = createSlice({ name: 'auth', initialState: { user: JSON.parse
 });
 export const ui = createSlice({ name: 'ui', initialState: { data: {}, msg: null },
   reducers: { fetchRequest: () => {}, setData: (s, a) => { s.data[a.payload.key] = a.payload.data; }, submitRequest: () => {}, setMsg: (s, a) => { s.msg = a.payload; } } });
+
+const initialNotifs = JSON.parse(localStorage.getItem('barber_notifications') || '[]');
+export const notifications = createSlice({
+  name: 'notifications',
+  initialState: {
+    items: initialNotifs,
+    unreadCount: initialNotifs.filter((n) => !n.read).length
+  },
+  reducers: {
+    setNotifications: (s, a) => {
+      s.items = a.payload;
+      s.unreadCount = a.payload.filter((n) => !n.read).length;
+      localStorage.setItem('barber_notifications', JSON.stringify(s.items));
+    },
+    addNotification: (s, a) => {
+      const exists = s.items.some((n) => n.id === a.payload.id);
+      if (exists) return;
+
+      const item = {
+        id: a.payload.id || Date.now().toString(),
+        title: a.payload.title || 'New Appointment',
+        message: a.payload.message || '',
+        customer: a.payload.customer,
+        serviceName: a.payload.serviceName,
+        price: a.payload.price,
+        date: a.payload.date,
+        time: a.payload.time,
+        type: a.payload.type || 'booking',
+        timestamp: a.payload.timestamp || new Date().toISOString(),
+        read: false
+      };
+      s.items.unshift(item);
+      if (s.items.length > 50) s.items.pop();
+      s.unreadCount = s.items.filter((n) => !n.read).length;
+      localStorage.setItem('barber_notifications', JSON.stringify(s.items));
+    },
+    markAsRead: (s, a) => {
+      const item = s.items.find((n) => n.id === a.payload);
+      if (item && !item.read) {
+        item.read = true;
+        s.unreadCount = s.items.filter((n) => !n.read).length;
+        localStorage.setItem('barber_notifications', JSON.stringify(s.items));
+      }
+    },
+    markAllAsRead: (s) => {
+      s.items.forEach((n) => {
+        n.read = true;
+      });
+      s.unreadCount = 0;
+      localStorage.setItem('barber_notifications', JSON.stringify(s.items));
+    },
+    clearAll: (s) => {
+      s.items = [];
+      s.unreadCount = 0;
+      localStorage.removeItem('barber_notifications');
+    }
+  }
+});
