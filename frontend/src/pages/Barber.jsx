@@ -753,11 +753,15 @@ function Appts() {
         if (!isCancelled) {
           const list = Array.isArray(res.data) ? res.data : [];
           setAvailableSlots(list);
-          if (list.length > 0) {
-            setWalkInStartMin((prev) => (list.some((s) => s.startMin === prev) ? prev : list[0].startMin));
-          } else {
-            setWalkInStartMin(null);
-          }
+
+          const now = new Date();
+          const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          const nowMins = now.getHours() * 60 + now.getMinutes();
+          const isToday = walkInDate === todayStr;
+
+          // Auto-select first non-past available slot
+          const firstValid = list.find((s) => s.available && (!isToday || s.startMin >= nowMins));
+          setWalkInStartMin(firstValid ? firstValid.startMin : null);
         }
       } catch {
         if (!isCancelled) {
@@ -902,8 +906,8 @@ function Appts() {
                         type="button"
                         onClick={() => setClientMode('existing')}
                         className={`px-3 py-1 rounded-lg font-semibold transition-all ${clientMode === 'existing'
-                            ? 'bg-white text-stone-900 shadow-xs'
-                            : 'text-stone-600 hover:text-stone-900'
+                          ? 'bg-white text-stone-900 shadow-xs'
+                          : 'text-stone-600 hover:text-stone-900'
                           }`}
                       >
                         Existing Client
@@ -912,8 +916,8 @@ function Appts() {
                         type="button"
                         onClick={() => setClientMode('new')}
                         className={`px-3 py-1 rounded-lg font-semibold transition-all ${clientMode === 'new'
-                            ? 'bg-amber-600 text-white shadow-xs'
-                            : 'text-stone-600 hover:text-stone-900'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-stone-600 hover:text-stone-900'
                           }`}
                       >
                         + New Client
@@ -1059,51 +1063,73 @@ function Appts() {
                 </div>
               </div>
 
-              {/* ──────── REMAINING SLOTS SELECTOR ──────── */}
+              {/* ──────── SLOTS SELECTOR ──────── */}
               <div className="space-y-2 pt-2 border-t border-stone-100">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-stone-800 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Remaining Available Slots (Start Time) <span className="text-red-500">*</span></span>
+                    <span>Time Slot (Start Time) <span className="text-red-500">*</span></span>
                   </label>
-                  {availableSlots.length > 0 && (
-                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                      {availableSlots.length} available slot{availableSlots.length > 1 ? 's' : ''}
-                    </span>
-                  )}
+                  {(() => {
+                    const now = new Date();
+                    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    const nowMins = now.getHours() * 60 + now.getMinutes();
+                    const isToday = walkInDate === todayStr;
+                    const availableCount = availableSlots.filter((s) => s.available && (!isToday || s.startMin >= nowMins)).length;
+                    return availableCount > 0 ? (
+                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                        {availableCount} available slot{availableCount > 1 ? 's' : ''}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
 
                 {walkInServiceIds.length === 0 ? (
                   <div className="p-4 rounded-xl bg-stone-50 border border-dashed border-stone-200 text-center text-xs text-stone-500">
-                    👈 Please select at least one service above to compute duration and view remaining available slots.
+                    👈 Please select at least one service above to compute duration and view time slots.
                   </div>
                 ) : slotsLoading ? (
                   <div className="p-6 rounded-xl bg-stone-50 border border-stone-200 text-center space-y-2">
                     <RefreshCw className="w-5 h-5 text-amber-600 mx-auto animate-spin" />
-                    <p className="text-xs text-stone-500 font-medium">Checking remaining available slots...</p>
+                    <p className="text-xs text-stone-500 font-medium">Checking time slots...</p>
                   </div>
                 ) : availableSlots.length === 0 ? (
                   <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-center text-xs text-red-700 space-y-1">
-                    <p className="font-bold">No remaining slots available for {walkInTotalDuration} mins on {walkInDate}</p>
-                    <p className="text-[11px] text-red-600">All slots are either booked or past. Please choose a different date.</p>
+                    <p className="font-bold">No slots found for {walkInTotalDuration} mins on {walkInDate}</p>
+                    <p className="text-[11px] text-red-600">The shop may be closed or on holiday. Please choose a different date.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-44 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-48 overflow-y-auto pr-1">
                     {availableSlots.map((slot) => {
+                      const now = new Date();
+                      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                      const nowMins = now.getHours() * 60 + now.getMinutes();
+                      const isToday = walkInDate === todayStr;
+
+                      const isPast = isToday && slot.startMin < nowMins;
+                      const isBooked = !slot.available;
+                      const disabled = isPast || isBooked;
                       const isSelected = walkInStartMin === slot.startMin;
+
                       return (
                         <button
                           type="button"
                           key={slot.startMin}
+                          disabled={disabled}
                           onClick={() => setWalkInStartMin(slot.startMin)}
-                          className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all text-center ${isSelected
-                            ? 'bg-amber-600 text-white border-amber-600 shadow-sm shadow-amber-600/30 ring-2 ring-amber-600/30'
-                            : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200 hover:border-stone-300'
+                          className={`py-2 px-1.5 rounded-xl text-xs font-semibold border transition-all text-center relative ${disabled
+                            ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-50 select-none'
+                            : isSelected
+                              ? 'bg-amber-600 text-white border-amber-600 shadow-sm shadow-amber-600/30 ring-2 ring-amber-600/30 font-bold'
+                              : 'bg-white hover:bg-stone-50 text-stone-800 border-stone-200 hover:border-amber-500 shadow-xs cursor-pointer'
                             }`}
                         >
-                          <span>{fmt(slot.startMin)}</span>
-                          <span className={`block text-[9px] font-normal ${isSelected ? 'text-amber-100' : 'text-stone-400'}`}>
-                            until {fmt(slot.endMin)}
+                          <span className={disabled ? 'line-through' : ''}>{fmt(slot.startMin)}</span>
+                          <span
+                            className={`block text-[9px] font-normal ${disabled ? 'text-stone-400 no-underline' : isSelected ? 'text-amber-100' : 'text-stone-400'
+                              }`}
+                          >
+                            {isPast ? 'Past' : isBooked ? 'Booked' : `until ${fmt(slot.endMin)}`}
                           </span>
                         </button>
                       );
@@ -1139,7 +1165,7 @@ function Appts() {
                     }
                     className="btn-brand disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span>Confirm Booking (₹{walkInTotalPrice})</span>
+                    <span>Confirm (₹{walkInTotalPrice})</span>
                   </button>
                 </div>
               </div>

@@ -573,17 +573,7 @@ r.get('/slots', wrap(async (req, res) => {
   const booked = await Appointment.find({ shopId: req.shopId, date, blocking: true });
   const allSlots = genSlots({ openMin: shop.openMin, closeMin: shop.closeMin, duration, booked });
 
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const currentMin = now.getHours() * 60 + now.getMinutes();
-
-  const remainingSlots = allSlots.filter((slot) => {
-    if (!slot.available) return false;
-    if (date === todayStr && slot.startMin <= currentMin) return false;
-    return true;
-  });
-
-  res.json(remainingSlots);
+  res.json(allSlots);
 }));
 
 module.exports = r;
