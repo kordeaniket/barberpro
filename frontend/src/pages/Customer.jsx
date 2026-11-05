@@ -1773,10 +1773,10 @@ export default function Customer() {
                       setActiveTab('appointments');
                     }}
                     className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${n.isUrgent || n.type === 'reminder'
-                        ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
-                        : n.read
-                          ? 'bg-[#191a23] border-stone-800/80 hover:border-stone-700 opacity-80'
-                          : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
+                      ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
+                      : n.read
+                        ? 'bg-[#191a23] border-stone-800/80 hover:border-stone-700 opacity-80'
+                        : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
                       }`}
                   >
                     <div className="flex items-start justify-between gap-2">
