@@ -83,6 +83,7 @@ function NotificationMenu({ isMobile = false }) {
   const unreadCount = useSelector((s) => s.notifications?.unreadCount) || 0;
   const [open, setOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('unread'); // 'unread' | 'all'
   const menuRef = useRef(null);
 
   const handleManualRefresh = async () => {
@@ -113,6 +114,89 @@ function NotificationMenu({ isMobile = false }) {
     }
   }, [open]);
 
+  // Filter only unread items for the "New / Unread" tab
+  const unreadNotifs = notifs.filter((n) => !n.read);
+
+  // Helper to group all notifications day-by-day
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const yest = new Date();
+  yest.setDate(yest.getDate() - 1);
+  const yestStr = yest.toISOString().slice(0, 10);
+
+  const dailyGroups = {};
+  notifs.forEach((n) => {
+    const dateKey = n.date || (n.timestamp ? n.timestamp.slice(0, 10) : todayStr);
+    let label = dateKey;
+    if (dateKey === todayStr) label = 'Today';
+    else if (dateKey === yestStr) label = 'Yesterday';
+    if (!dailyGroups[label]) dailyGroups[label] = [];
+    dailyGroups[label].push(n);
+  });
+
+  const renderCard = (n) => {
+    const isCancellation = n.type === 'cancellation';
+    const isCompleted = n.type === 'completed';
+
+    return (
+      <div
+        key={n.id}
+        onClick={() => {
+          d(notifications.actions.markAsRead(n.id));
+          setOpen(false);
+          nav('/barber/appointments');
+        }}
+        className={`p-3.5 transition-colors cursor-pointer flex items-start gap-3 hover:bg-stone-50 ${
+          !n.read ? 'bg-amber-50/40' : 'bg-white'
+        }`}
+      >
+        <div
+          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+            isCancellation
+              ? 'bg-red-100 text-red-700'
+              : isCompleted
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-amber-100 text-amber-800'
+          }`}
+        >
+          {isCancellation ? (
+            <AlertCircle className="w-4 h-4" />
+          ) : isCompleted ? (
+            <CheckCircle2 className="w-4 h-4" />
+          ) : (
+            <Scissors className="w-4 h-4 rotate-45" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold text-stone-900 text-xs truncate">
+              {n.title}
+            </span>
+            <span className="text-[10px] text-stone-400 shrink-0">
+              {timeAgo(n.timestamp)}
+            </span>
+          </div>
+
+          <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed">
+            {n.message}
+          </p>
+
+          {n.date && (
+            <div className="flex items-center gap-2 text-[10px] text-stone-500 font-medium">
+              <span>📅 {n.date}</span>
+              {n.time && <span>• ⏰ {n.time}</span>}
+              {n.price && <span className="font-bold text-amber-800">• ₹{n.price}</span>}
+            </div>
+          )}
+        </div>
+
+        {!n.read && (
+          <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0 mt-1.5" />
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -137,15 +221,10 @@ function NotificationMenu({ isMobile = false }) {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-stone-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="p-3.5 bg-stone-50 border-b border-stone-200 flex items-center justify-between">
+          <div className="p-3 bg-stone-50 border-b border-stone-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-amber-600" />
-              <span className="font-bold text-stone-900 text-sm">Booking Alerts</span>
-              {unreadCount > 0 && (
-                <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
-                  {unreadCount} new
-                </span>
-              )}
+              <span className="font-bold text-stone-900 text-sm">Notifications</span>
             </div>
 
             <div className="flex items-center gap-1">
@@ -183,80 +262,81 @@ function NotificationMenu({ isMobile = false }) {
             </div>
           </div>
 
-          {/* Notifications List */}
+          {/* Dual Tabs: [New / Unread] and [Daily All History] */}
+          <div className="flex border-b border-stone-200 bg-stone-100/60 p-1 gap-1 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setActiveTab('unread')}
+              className={`flex-1 py-1.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'unread'
+                  ? 'bg-white text-stone-900 shadow-xs'
+                  : 'text-stone-500 hover:text-stone-900'
+              }`}
+            >
+              <span>Latest (Unread)</span>
+              {unreadCount > 0 && (
+                <span className="px-1.5 py-0.2 bg-amber-600 text-white rounded-full text-[10px] font-bold">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={`flex-1 py-1.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'all'
+                  ? 'bg-white text-stone-900 shadow-xs'
+                  : 'text-stone-500 hover:text-stone-900'
+              }`}
+            >
+              <span>Daily All</span>
+              <span className="text-[10px] text-stone-400 font-normal">({notifs.length})</span>
+            </button>
+          </div>
+
+          {/* Notifications List Content */}
           <div className="max-h-80 overflow-y-auto divide-y divide-stone-100">
-            {notifs.length === 0 ? (
+            {activeTab === 'unread' ? (
+              unreadNotifs.length === 0 ? (
+                <div className="p-8 text-center text-xs text-stone-400 space-y-2">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto stroke-1" />
+                  <p className="font-semibold text-stone-800 text-sm">All caught up!</p>
+                  <p className="text-[11px] text-stone-500 max-w-xs mx-auto">
+                    You have read all new notifications. Check the <b>Daily All</b> tab to review past notifications.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('all')}
+                    className="mt-1 text-xs font-semibold text-amber-700 hover:text-amber-800 underline block mx-auto"
+                  >
+                    View Daily History →
+                  </button>
+                </div>
+              ) : (
+                unreadNotifs.map(renderCard)
+              )
+            ) : notifs.length === 0 ? (
               <div className="p-8 text-center text-xs text-stone-400 space-y-1">
                 <Bell className="w-8 h-8 text-stone-300 mx-auto mb-1 stroke-1" />
                 <p className="font-semibold text-stone-700">No notifications yet</p>
                 <p className="text-[11px] text-stone-400">
-                  New appointment bookings will alert you in real-time here.
+                  New appointment bookings will appear here.
                 </p>
               </div>
             ) : (
-              notifs.map((n) => {
-                const isCancellation = n.type === 'cancellation';
-                const isCompleted = n.type === 'completed';
-
-                return (
-                  <div
-                    key={n.id}
-                    onClick={() => {
-                      d(notifications.actions.markAsRead(n.id));
-                      setOpen(false);
-                      nav('/barber/appointments');
-                    }}
-                    className={`p-3.5 transition-colors cursor-pointer flex items-start gap-3 hover:bg-stone-50 ${
-                      !n.read ? 'bg-amber-50/50' : ''
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                        isCancellation
-                          ? 'bg-red-100 text-red-700'
-                          : isCompleted
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {isCancellation ? (
-                        <AlertCircle className="w-4 h-4" />
-                      ) : isCompleted ? (
-                        <CheckCircle2 className="w-4 h-4" />
-                      ) : (
-                        <Scissors className="w-4 h-4 rotate-45" />
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-stone-900 text-xs truncate">
-                          {n.title}
-                        </span>
-                        <span className="text-[10px] text-stone-400 shrink-0">
-                          {timeAgo(n.timestamp)}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed">
-                        {n.message}
-                      </p>
-
-                      {n.date && (
-                        <div className="flex items-center gap-2 text-[10px] text-stone-500 font-medium">
-                          <span>📅 {n.date}</span>
-                          {n.time && <span>• ⏰ {n.time}</span>}
-                          {n.price && <span className="font-bold text-amber-800">• ₹{n.price}</span>}
-                        </div>
-                      )}
-                    </div>
-
-                    {!n.read && (
-                      <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0 mt-1.5" />
-                    )}
+              Object.entries(dailyGroups).map(([dateLabel, groupItems]) => (
+                <div key={dateLabel}>
+                  <div className="px-3.5 py-1.5 bg-stone-100/80 text-stone-600 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between border-y border-stone-200/60 sticky top-0 z-10">
+                    <span>{dateLabel}</span>
+                    <span className="text-[10px] font-normal text-stone-400">
+                      {groupItems.length} alert{groupItems.length > 1 ? 's' : ''}
+                    </span>
                   </div>
-                );
-              })
+                  <div className="divide-y divide-stone-100">
+                    {groupItems.map(renderCard)}
+                  </div>
+                </div>
+              ))
             )}
           </div>
 

@@ -30,8 +30,12 @@ export const notifications = createSlice({
   },
   reducers: {
     setNotifications: (s, a) => {
-      s.items = a.payload;
-      s.unreadCount = a.payload.filter((n) => !n.read).length;
+      const readMap = new Map(s.items.map((n) => [n.id, n.read]));
+      s.items = a.payload.map((item) => ({
+        ...item,
+        read: readMap.has(item.id) ? readMap.get(item.id) : Boolean(item.read)
+      }));
+      s.unreadCount = s.items.filter((n) => !n.read).length;
       localStorage.setItem('barber_notifications', JSON.stringify(s.items));
     },
     addNotification: (s, a) => {
