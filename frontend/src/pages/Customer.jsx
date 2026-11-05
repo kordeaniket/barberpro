@@ -896,13 +896,13 @@ export default function Customer() {
               )}
             </button>
 
-            <button
+            {/* <button
               onClick={() => setShowLogoutModal(true)}
               className="p-2 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800/80 transition-colors"
               title="Sign out"
             >
               <LogOut className="w-4 h-4" />
-            </button>
+            </button> */}
           </div>
         </header>
 

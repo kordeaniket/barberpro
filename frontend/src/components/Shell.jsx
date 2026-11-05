@@ -147,18 +147,16 @@ function NotificationMenu({ isMobile = false }) {
           setOpen(false);
           nav('/barber/appointments');
         }}
-        className={`p-3.5 transition-colors cursor-pointer flex items-start gap-3 hover:bg-stone-50 ${
-          !n.read ? 'bg-amber-50/40' : 'bg-white'
-        }`}
+        className={`p-3.5 transition-colors cursor-pointer flex items-start gap-3 hover:bg-stone-50 ${!n.read ? 'bg-amber-50/40' : 'bg-white'
+          }`}
       >
         <div
-          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-            isCancellation
+          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${isCancellation
               ? 'bg-red-100 text-red-700'
               : isCompleted
                 ? 'bg-emerald-100 text-emerald-700'
                 : 'bg-amber-100 text-amber-800'
-          }`}
+            }`}
         >
           {isCancellation ? (
             <AlertCircle className="w-4 h-4" />
@@ -204,11 +202,10 @@ function NotificationMenu({ isMobile = false }) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`relative p-2 rounded-xl transition-all ${
-          isMobile
+        className={`relative p-2 rounded-xl transition-all ${isMobile
             ? 'bg-stone-800 hover:bg-stone-700 text-stone-200'
             : 'border border-stone-200/90 bg-white hover:bg-stone-50 text-stone-700 shadow-sm'
-        }`}
+          }`}
         title="Real-Time Booking Notifications"
         aria-label="View notifications"
       >
@@ -269,11 +266,10 @@ function NotificationMenu({ isMobile = false }) {
             <button
               type="button"
               onClick={() => setActiveTab('unread')}
-              className={`flex-1 py-1.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === 'unread'
+              className={`flex-1 py-1.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === 'unread'
                   ? 'bg-white text-stone-900 shadow-xs'
                   : 'text-stone-500 hover:text-stone-900'
-              }`}
+                }`}
             >
               <span>Latest (Unread)</span>
               {unreadCount > 0 && (
@@ -285,11 +281,10 @@ function NotificationMenu({ isMobile = false }) {
             <button
               type="button"
               onClick={() => setActiveTab('all')}
-              className={`flex-1 py-1.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === 'all'
+              className={`flex-1 py-1.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === 'all'
                   ? 'bg-white text-stone-900 shadow-xs'
                   : 'text-stone-500 hover:text-stone-900'
-              }`}
+                }`}
             >
               <span>Daily All</span>
               <span className="text-[10px] text-stone-400 font-normal">({notifs.length})</span>
@@ -387,11 +382,10 @@ function UserProfileMenu({ onLogout, isMobile = false }) {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen(!open)}
-        className={`flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all ${
-          isMobile
+        className={`flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all ${isMobile
             ? 'border-stone-700 bg-stone-800 text-white hover:bg-stone-700'
             : 'border-stone-200/90 bg-white text-stone-800 hover:bg-stone-50 hover:border-stone-300 shadow-xs'
-        }`}
+          }`}
         aria-label="User profile menu"
       >
         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
@@ -448,7 +442,7 @@ function UserProfileMenu({ onLogout, isMobile = false }) {
               </button>
             )}
 
-            <button
+            {/* <button
               onClick={() => {
                 setOpen(false);
                 onLogout();
@@ -457,7 +451,7 @@ function UserProfileMenu({ onLogout, isMobile = false }) {
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
-            </button>
+            </button> */}
           </div>
         </div>
       )}
@@ -484,8 +478,8 @@ export function Toast() {
     <div className="fixed top-4 right-4 left-4 sm:left-auto sm:max-w-md z-50 animate-in fade-in slide-in-from-top-4 duration-200">
       <div
         className={`flex items-start gap-3 p-4 rounded-2xl shadow-float border ${isErr
-            ? 'bg-red-50/95 border-red-200 text-red-900 backdrop-blur-sm'
-            : 'bg-emerald-50/95 border-emerald-200 text-emerald-900 backdrop-blur-sm'
+          ? 'bg-red-50/95 border-red-200 text-red-900 backdrop-blur-sm'
+          : 'bg-emerald-50/95 border-emerald-200 text-emerald-900 backdrop-blur-sm'
           }`}
       >
         {isErr ? (
@@ -766,181 +760,181 @@ export default function Shell({ title, links, children, actions, subtitle }) {
       {/* Main Content Area - offset for fixed sidebar on desktop */}
       <div className="md:pl-64 flex flex-col min-h-screen">
         {/* Mobile Top App Bar */}
-      <header className="md:hidden sticky top-0 z-30 bg-stone-900/95 backdrop-blur-md text-white border-b border-stone-800 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {storeLogo && !sidebarLogoFailed ? (
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-amber-500/70 bg-stone-800 shrink-0">
-              <img
-                src={storeLogo}
-                alt={displayTitle}
-                onError={() => setSidebarLogoFailed(true)}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-white shrink-0">
-              <Scissors className="w-4 h-4 rotate-45" />
-            </div>
-          )}
-          <span className="font-bold text-sm sm:text-base tracking-tight text-white truncate max-w-[180px]">
-            {displayTitle}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {/* Mobile Full Screen View Button */}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 transition-colors"
-            title={isFullscreen ? 'Exit Full Screen' : 'Full Screen View'}
-            aria-label="Toggle full screen"
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4 text-amber-400" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
-          {isBarber && <NotificationMenu isMobile={true} />}
-          <UserProfileMenu onLogout={() => setShowLogoutModal(true)} isMobile={true} />
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 transition-colors"
-            aria-label="Toggle menu"
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile Slide-over Drawer */}
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-40 flex">
-          <div
-            className="fixed inset-0 bg-stone-950/70 backdrop-blur-sm transition-opacity"
-            onClick={() => setMobileOpen(false)}
-          />
-          <div className="relative w-4/5 max-w-xs bg-stone-900 text-white flex flex-col h-full shadow-2xl z-50 p-4">
-            <div className="flex items-center justify-between pb-4 border-b border-stone-800 mb-4">
-              <div className="flex items-center gap-2.5 min-w-0">
-                {storeLogo && !sidebarLogoFailed ? (
-                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-amber-500/70 bg-stone-800 shrink-0">
-                    <img
-                      src={storeLogo}
-                      alt={displayTitle}
-                      onError={() => setSidebarLogoFailed(true)}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white shrink-0">
-                    <Scissors className="w-4 h-4 rotate-45" />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <span className="font-bold text-sm text-white block truncate">{displayTitle}</span>
-                  <span className="text-[10px] block text-stone-400 uppercase tracking-wider truncate">
-                    {displaySubtitle}
-                  </span>
-                </div>
+        <header className="md:hidden sticky top-0 z-30 bg-stone-900/95 backdrop-blur-md text-white border-b border-stone-800 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {storeLogo && !sidebarLogoFailed ? (
+              <div className="w-8 h-8 rounded-lg overflow-hidden border border-amber-500/70 bg-stone-800 shrink-0">
+                <img
+                  src={storeLogo}
+                  alt={displayTitle}
+                  onError={() => setSidebarLogoFailed(true)}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 shrink-0"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <nav className="flex-1 space-y-1.5 overflow-y-auto">
-              {links.map((l) => {
-                const Icon = l.icon;
-                return (
-                  <NavLink
-                    key={l.to}
-                    to={l.to}
-                    end={l.end !== false}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all ${isActive
-                        ? 'bg-amber-600 text-white font-semibold'
-                        : 'text-stone-300 hover:bg-stone-800'
-                      }`
-                    }
-                  >
-                    {Icon && <Icon className="w-4 h-4 shrink-0" />}
-                    <span>{l.label}</span>
-                  </NavLink>
-                );
-              })}
-            </nav>
-
-            <div className="pt-4 border-t border-stone-800 space-y-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  toggleFullscreen();
-                  setMobileOpen(false);
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold border border-stone-700 transition-colors"
-              >
-                {isFullscreen ? <Minimize2 className="w-4 h-4 text-amber-400" /> : <Maximize2 className="w-4 h-4" />}
-                <span>{isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen View'}</span>
-              </button>
-              <div className="text-xs text-stone-400">
-                Logged in as <b className="text-white">{u?.name}</b>
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-white shrink-0">
+                <Scissors className="w-4 h-4 rotate-45" />
               </div>
-              <button
-                onClick={() => {
-                  setMobileOpen(false);
-                  setShowLogoutModal(true);
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-950/40 text-red-400 text-sm font-medium border border-red-900/50"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Log out</span>
-              </button>
-            </div>
+            )}
+            <span className="font-bold text-sm sm:text-base tracking-tight text-white truncate max-w-[180px]">
+              {displayTitle}
+            </span>
           </div>
-        </div>
-      )}
-
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 pb-20 md:pb-8">
-        {/* Top Header / Breadcrumb Bar */}
-        <div className="bg-white/80 backdrop-blur-md border-b border-stone-200/80 sticky top-0 z-20 px-4 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">{title}</h1>
-            {subtitle && <p className="text-xs sm:text-sm text-stone-500 mt-0.5">{subtitle}</p>}
-          </div>
-          <div className="flex items-center gap-2.5 flex-wrap self-end sm:self-center">
-            {actions}
-            {/* Notification & Profile hidden on mobile — already in mobile top bar */}
-            {isBarber && <div className="hidden md:block"><NotificationMenu /></div>}
-            <div className="hidden md:block"><UserProfileMenu onLogout={() => setShowLogoutModal(true)} /></div>
-          </div>
-        </div>
-
-        {/* Page Inner Container */}
-        <div className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">{children}</div>
-      </main>
-
-      {/* Mobile Bottom Quick-Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-lg border-t border-stone-200 text-stone-600 flex items-center justify-around z-30 py-1.5 px-2 shadow-lg">
-        {links.slice(0, 4).map((l) => {
-          const Icon = l.icon || Scissors;
-          return (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.end !== false}
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${isActive ? 'text-amber-600 font-semibold' : 'text-stone-500 hover:text-stone-900'
-                }`
-              }
+          <div className="flex items-center gap-1.5">
+            {/* Mobile Full Screen View Button */}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 transition-colors"
+              title={isFullscreen ? 'Exit Full Screen' : 'Full Screen View'}
+              aria-label="Toggle full screen"
             >
-              <Icon className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] tracking-tight">{l.label}</span>
-            </NavLink>
-          );
-        })}
-      </nav>
+              {isFullscreen ? <Minimize2 className="w-4 h-4 text-amber-400" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+            {isBarber && <NotificationMenu isMobile={true} />}
+            <UserProfileMenu onLogout={() => setShowLogoutModal(true)} isMobile={true} />
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Slide-over Drawer */}
+        {mobileOpen && (
+          <div className="md:hidden fixed inset-0 z-40 flex">
+            <div
+              className="fixed inset-0 bg-stone-950/70 backdrop-blur-sm transition-opacity"
+              onClick={() => setMobileOpen(false)}
+            />
+            <div className="relative w-4/5 max-w-xs bg-stone-900 text-white flex flex-col h-full shadow-2xl z-50 p-4">
+              <div className="flex items-center justify-between pb-4 border-b border-stone-800 mb-4">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {storeLogo && !sidebarLogoFailed ? (
+                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-amber-500/70 bg-stone-800 shrink-0">
+                      <img
+                        src={storeLogo}
+                        alt={displayTitle}
+                        onError={() => setSidebarLogoFailed(true)}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white shrink-0">
+                      <Scissors className="w-4 h-4 rotate-45" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <span className="font-bold text-sm text-white block truncate">{displayTitle}</span>
+                    <span className="text-[10px] block text-stone-400 uppercase tracking-wider truncate">
+                      {displaySubtitle}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <nav className="flex-1 space-y-1.5 overflow-y-auto">
+                {links.map((l) => {
+                  const Icon = l.icon;
+                  return (
+                    <NavLink
+                      key={l.to}
+                      to={l.to}
+                      end={l.end !== false}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all ${isActive
+                          ? 'bg-amber-600 text-white font-semibold'
+                          : 'text-stone-300 hover:bg-stone-800'
+                        }`
+                      }
+                    >
+                      {Icon && <Icon className="w-4 h-4 shrink-0" />}
+                      <span>{l.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </nav>
+
+              <div className="pt-4 border-t border-stone-800 space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleFullscreen();
+                    setMobileOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold border border-stone-700 transition-colors"
+                >
+                  {isFullscreen ? <Minimize2 className="w-4 h-4 text-amber-400" /> : <Maximize2 className="w-4 h-4" />}
+                  <span>{isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen View'}</span>
+                </button>
+                <div className="text-xs text-stone-400">
+                  Logged in as <b className="text-white">{u?.name}</b>
+                </div>
+                <button
+                  onClick={() => {
+                    setMobileOpen(false);
+                    setShowLogoutModal(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-950/40 text-red-400 text-sm font-medium border border-red-900/50"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Log out</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col min-w-0 pb-20 md:pb-8">
+          {/* Top Header / Breadcrumb Bar */}
+          <div className="bg-white/80 backdrop-blur-md border-b border-stone-200/80 sticky top-0 z-20 px-4 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">{title}</h1>
+              {subtitle && <p className="text-xs sm:text-sm text-stone-500 mt-0.5">{subtitle}</p>}
+            </div>
+            <div className="flex items-center gap-2.5 flex-wrap self-end sm:self-center">
+              {actions}
+              {/* Notification & Profile hidden on mobile — already in mobile top bar */}
+              {isBarber && <div className="hidden md:block"><NotificationMenu /></div>}
+              <div className="hidden md:block"><UserProfileMenu onLogout={() => setShowLogoutModal(true)} /></div>
+            </div>
+          </div>
+
+          {/* Page Inner Container */}
+          <div className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">{children}</div>
+        </main>
+
+        {/* Mobile Bottom Quick-Navigation Bar */}
+        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-lg border-t border-stone-200 text-stone-600 flex items-center justify-around z-30 py-1.5 px-2 shadow-lg">
+          {links.slice(0, 4).map((l) => {
+            const Icon = l.icon || Scissors;
+            return (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={l.end !== false}
+                className={({ isActive }) =>
+                  `flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${isActive ? 'text-amber-600 font-semibold' : 'text-stone-500 hover:text-stone-900'
+                  }`
+                }
+              >
+                <Icon className="w-5 h-5 mb-0.5" />
+                <span className="text-[10px] tracking-tight">{l.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
       </div>
 
       {/* Logout Confirmation Modal */}

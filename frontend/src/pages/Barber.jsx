@@ -72,7 +72,6 @@ const barberLinks = [
   { to: '/barber/appointments', label: 'Appointments', icon: Calendar },
   { to: '/barber/customers', label: 'Clients', icon: Users },
   { to: '/barber/services', label: 'Menu & Services', icon: Scissors },
-  { to: '/barber/store', label: 'Store & Profile', icon: Settings }
 ];
 
 const fetchAppts = { key: 'appts', url: '/barber/appointments' };
