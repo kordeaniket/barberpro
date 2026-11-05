@@ -464,6 +464,11 @@ export default function Customer() {
     return true;
   });
 
+  // Disable past slots if selected date is today
+  const isToday = selectedDate === new Date().toISOString().slice(0, 10);
+  const nowMinutes = (() => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); })();
+  const isSlotDisabled = (s) => !s.available || (isToday && s.startMin < nowMinutes);
+
   // Slot groups by time of day
   const morningSlots = slots.filter((s) => s.startMin < 720); // before 12 PM
   const afternoonSlots = slots.filter((s) => s.startMin >= 720 && s.startMin < 1020); // 12 PM - 5 PM
@@ -751,17 +756,16 @@ export default function Customer() {
                       type="button"
                       onClick={() => toggleService(s)}
                       className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 ${isSelected
-                          ? 'border-amber-600 bg-amber-50/70 ring-2 ring-amber-600/30 shadow-sm'
-                          : 'border-stone-200 bg-white hover:border-stone-300'
+                        ? 'border-amber-600 bg-amber-50/70 ring-2 ring-amber-600/30 shadow-sm'
+                        : 'border-stone-200 bg-white hover:border-stone-300'
                         }`}
                     >
                       <div className="flex items-center gap-2.5">
                         <div
-                          className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
-                            isSelected
+                          className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${isSelected
                               ? 'bg-amber-600 border-amber-600 text-white'
                               : 'border-stone-300 bg-stone-50'
-                          }`}
+                            }`}
                         >
                           {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                         </div>
@@ -777,11 +781,10 @@ export default function Customer() {
                       <div className="text-right shrink-0">
                         <span className="font-extrabold text-amber-700 text-sm block">₹{s.price}</span>
                         <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
-                            isSelected
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${isSelected
                               ? 'bg-amber-600 text-white'
                               : 'bg-stone-100 text-stone-500'
-                          }`}
+                            }`}
                         >
                           {isSelected ? 'Selected' : '+ Add'}
                         </span>
@@ -813,8 +816,8 @@ export default function Customer() {
                       type="button"
                       onClick={() => setSelectedDate(d.dateStr)}
                       className={`min-w-[62px] py-2.5 px-2 rounded-2xl border text-center transition-all shrink-0 ${isSelected
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/25 font-bold scale-[1.02]'
-                          : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/25 font-bold scale-[1.02]'
+                        : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
                         }`}
                     >
                       <span className="text-[10px] uppercase font-bold block opacity-80">{d.dayName}</span>
@@ -869,16 +872,17 @@ export default function Customer() {
                       <div className="grid grid-cols-4 gap-2">
                         {morningSlots.map((s) => {
                           const isPicked = selectedSlot?.startMin === s.startMin;
+                          const disabled = isSlotDisabled(s);
                           return (
                             <button
                               key={s.startMin}
-                              disabled={!s.available}
+                              disabled={disabled}
                               onClick={() => setSelectedSlot(s)}
-                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${!s.available
-                                  ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed'
-                                  : isPicked
-                                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
-                                    : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
+                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${disabled
+                                ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed opacity-50'
+                                : isPicked
+                                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
+                                  : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
                                 }`}
                             >
                               {fmt(s.startMin)}
@@ -899,16 +903,17 @@ export default function Customer() {
                       <div className="grid grid-cols-4 gap-2">
                         {afternoonSlots.map((s) => {
                           const isPicked = selectedSlot?.startMin === s.startMin;
+                          const disabled = isSlotDisabled(s);
                           return (
                             <button
                               key={s.startMin}
-                              disabled={!s.available}
+                              disabled={disabled}
                               onClick={() => setSelectedSlot(s)}
-                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${!s.available
-                                  ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed'
-                                  : isPicked
-                                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
-                                    : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
+                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${disabled
+                                ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed opacity-50'
+                                : isPicked
+                                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
+                                  : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
                                 }`}
                             >
                               {fmt(s.startMin)}
@@ -929,16 +934,17 @@ export default function Customer() {
                       <div className="grid grid-cols-4 gap-2">
                         {eveningSlots.map((s) => {
                           const isPicked = selectedSlot?.startMin === s.startMin;
+                          const disabled = isSlotDisabled(s);
                           return (
                             <button
                               key={s.startMin}
-                              disabled={!s.available}
+                              disabled={disabled}
                               onClick={() => setSelectedSlot(s)}
-                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${!s.available
-                                  ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed'
-                                  : isPicked
-                                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
-                                    : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
+                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${disabled
+                                ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed opacity-50'
+                                : isPicked
+                                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
+                                  : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
                                 }`}
                             >
                               {fmt(s.startMin)}
@@ -1008,8 +1014,8 @@ export default function Customer() {
                     key={tab.id}
                     onClick={() => setApptFilter(tab.id)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${apptFilter === tab.id
-                        ? 'bg-stone-900 text-white shadow-xs'
-                        : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
+                      ? 'bg-stone-900 text-white shadow-xs'
+                      : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
                       }`}
                   >
                     {tab.label}
