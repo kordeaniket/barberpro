@@ -176,8 +176,8 @@ function Home() {
               key={p.id}
               onClick={() => setPeriod(p.id)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${period === p.id
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
                 }`}
             >
               {p.label}
@@ -901,22 +901,20 @@ function Appts() {
                       <button
                         type="button"
                         onClick={() => setClientMode('existing')}
-                        className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                          clientMode === 'existing'
+                        className={`px-3 py-1 rounded-lg font-semibold transition-all ${clientMode === 'existing'
                             ? 'bg-white text-stone-900 shadow-xs'
                             : 'text-stone-600 hover:text-stone-900'
-                        }`}
+                          }`}
                       >
                         Existing Client
                       </button>
                       <button
                         type="button"
                         onClick={() => setClientMode('new')}
-                        className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                          clientMode === 'new'
+                        className={`px-3 py-1 rounded-lg font-semibold transition-all ${clientMode === 'new'
                             ? 'bg-amber-600 text-white shadow-xs'
                             : 'text-stone-600 hover:text-stone-900'
-                        }`}
+                          }`}
                       >
                         + New Client
                       </button>
@@ -1044,8 +1042,8 @@ function Appts() {
                         key={s._id}
                         onClick={() => toggleWalkInService(s._id)}
                         className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-xs ${isChecked
-                            ? 'border-amber-600 bg-amber-50/80 text-amber-950 font-bold ring-1 ring-amber-600/50'
-                            : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+                          ? 'border-amber-600 bg-amber-50/80 text-amber-950 font-bold ring-1 ring-amber-600/50'
+                          : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
                           }`}
                       >
                         <div className="min-w-0">
@@ -1099,8 +1097,8 @@ function Appts() {
                           key={slot.startMin}
                           onClick={() => setWalkInStartMin(slot.startMin)}
                           className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all text-center ${isSelected
-                              ? 'bg-amber-600 text-white border-amber-600 shadow-sm shadow-amber-600/30 ring-2 ring-amber-600/30'
-                              : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200 hover:border-stone-300'
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-sm shadow-amber-600/30 ring-2 ring-amber-600/30'
+                            : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200 hover:border-stone-300'
                             }`}
                         >
                           <span>{fmt(slot.startMin)}</span>
@@ -2606,7 +2604,6 @@ function ClientsPage() {
                             title="View Ledger"
                           >
                             <Wallet className="w-3.5 h-3.5" />
-                            <span>Ledger</span>
                           </button>
                           <button
                             onClick={() => setDeleteTarget(c._id)}
@@ -2640,8 +2637,8 @@ function ClientsPage() {
                     key={p}
                     onClick={() => setPage(p)}
                     className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${p === page
-                        ? 'bg-amber-600 text-white shadow-sm'
-                        : 'hover:bg-stone-200 text-stone-600'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'hover:bg-stone-200 text-stone-600'
                       }`}
                   >
                     {p}

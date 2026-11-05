@@ -851,9 +851,9 @@ export default function Customer() {
   }, [oneHourReminder?.booking?._id, oneHourReminder?.minutesLeft]);
 
   return (
-    <div className="h-screen w-full bg-[#0a0b0e] text-stone-100 font-sans selection:bg-amber-500/30 selection:text-amber-200 flex justify-center items-center sm:p-4 overflow-hidden">
+    <div className="fixed inset-0 h-[100dvh] w-full bg-[#0a0b0e] text-stone-100 font-sans selection:bg-amber-500/30 selection:text-amber-200 flex justify-center items-center sm:p-4 overflow-hidden">
       {/* Smartphone Frame Container */}
-      <div className="w-full max-w-md sm:max-w-lg bg-[#121318] border-x sm:border border-stone-800/90 sm:rounded-[38px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] h-full sm:h-[94vh] sm:max-h-[900px] flex flex-col relative overflow-hidden">
+      <div className="w-full max-w-md sm:max-w-lg bg-[#121318] border-x sm:border border-stone-800/90 sm:rounded-[38px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] h-full sm:h-[94vh] sm:max-h-[900px] flex flex-col relative overflow-hidden min-h-0">
 
         {/* Decorative Phone Speaker Notch on Desktop (Fixed top) */}
         <div className="hidden sm:flex items-center justify-center pt-2 pb-1 bg-[#121318] border-b border-stone-800/40 shrink-0">
@@ -918,7 +918,7 @@ export default function Customer() {
         </header>
 
         {/* 2. SCROLLABLE MIDDLE VIEWPORT */}
-        <main className="w-full p-4 space-y-4 flex-1 overflow-y-auto overscroll-contain">
+        <main className="w-full p-4 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6">
           {/* ⏰ 1-HOUR APPOINTMENT REMINDER BANNER */}
           {oneHourReminder && (
             <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border border-amber-500/40 rounded-2xl p-3.5 shadow-lg flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
@@ -1788,7 +1788,7 @@ export default function Customer() {
         </main>
 
         {/* ================= NATIVE MOBILE BOTTOM NAVIGATION BAR (FIXED FOOTER) ================= */}
-        <nav className="shrink-0 z-30 bg-[#16171f]/98 backdrop-blur-md border-t border-stone-800 text-stone-400 w-full flex items-center justify-around py-2.5 px-2 shadow-2xl">
+        <nav className="shrink-0 z-30 bg-[#16171f]/98 backdrop-blur-md border-t border-stone-800 text-stone-400 w-full flex items-center justify-around pt-2 pb-[max(0.625rem,env(safe-area-inset-bottom))] px-2 shadow-2xl">
           {[
             { id: 'home', label: 'Salon', icon: Store },
             { id: 'book', label: 'Book', icon: Scissors },
