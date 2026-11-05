@@ -853,8 +853,9 @@ export default function Shell({ title, links, children, actions, subtitle }) {
           </div>
           <div className="flex items-center gap-2.5 flex-wrap self-end sm:self-center">
             {actions}
-            {isBarber && <NotificationMenu />}
-            <UserProfileMenu onLogout={() => setShowLogoutModal(true)} />
+            {/* Notification & Profile hidden on mobile — already in mobile top bar */}
+            {isBarber && <div className="hidden md:block"><NotificationMenu /></div>}
+            <div className="hidden md:block"><UserProfileMenu onLogout={() => setShowLogoutModal(true)} /></div>
           </div>
         </div>
 
