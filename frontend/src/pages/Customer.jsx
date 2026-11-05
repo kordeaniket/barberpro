@@ -515,13 +515,13 @@ export default function Customer() {
 
         {/* User points chip & sign out */}
         <div className="flex items-center gap-1.5">
-          <button
+          {/* <button
             onClick={() => setActiveTab('profile')}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold hover:bg-amber-500/30 transition-colors"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>{pts} pts</span>
-          </button>
+          </button> */}
           <button
             onClick={() => setShowLogoutModal(true)}
             className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
