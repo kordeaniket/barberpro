@@ -95,3 +95,24 @@ div[style*="z-index: 99999999"],
 .e-de-overlay {
   display: none !important;
 }
+
+/* Global API loader indeterminate progress bar */
+@keyframes global-progress {
+  0% {
+    transform: translateX(-100%);
+    width: 45%;
+  }
+  50% {
+    transform: translateX(60%);
+    width: 65%;
+  }
+  100% {
+    transform: translateX(250%);
+    width: 45%;
+  }
+}
+
+.animate-global-progress {
+  animation: global-progress 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
