@@ -64,7 +64,9 @@ import {
   Activity,
   ExternalLink,
   Trash2,
-  MessageCircle
+  MessageCircle,
+  Armchair,
+  ArmchairIcon
 } from 'lucide-react';
 
 const barberLinks = [
@@ -843,23 +845,23 @@ function Appts() {
   return (
     <Shell
       title="Appointment Management"
-      subtitle="Comprehensive scheduling, calendar planner & server-side paginated records"
+      subtitle="Comprehensive scheduling, calendar planner."
       links={barberLinks}
       actions={
         <div className="flex items-center gap-2">
-          <button
+          {/* <button
             onClick={() => refreshAll()}
             className="btn-o p-2.5 text-stone-600 hover:text-stone-900"
             title="Refresh Appointments"
           >
             <RefreshCw className="w-4 h-4" />
-          </button>
+          </button> */}
           <button
             onClick={() => setShowAddForm(true)}
             className="btn-brand"
           >
             <Plus className="w-4 h-4" />
-            <span>New Walk-In Booking</span>
+            <span>New Booking</span>
           </button>
         </div>
       }
@@ -879,7 +881,7 @@ function Appts() {
                   <Scissors className="w-5 h-5 rotate-45" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-stone-900">New Walk-In Booking</h3>
+                  <h3 className="text-base font-bold text-stone-900">New Booking</h3>
                   <p className="text-xs text-stone-500">
                     Schedule client with real-time remaining time slots
                   </p>
@@ -957,7 +959,7 @@ function Appts() {
                   ) : (
                     <div className="space-y-2 pt-1 animate-in fade-in duration-150">
                       <div className="flex items-center justify-between text-[11px] text-stone-500 pb-0.5">
-                        <span>Enter new client details (auto-saved to directory)</span>
+                        <span>Enter new client details</span>
                         <button
                           type="button"
                           onClick={() => setClientMode('existing')}
@@ -994,9 +996,7 @@ function Appts() {
                           />
                         </div>
                       </div>
-                      <p className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md font-medium">
-                        ✓ If this mobile number is not in directory, a new client entry will be created automatically.
-                      </p>
+
                     </div>
                   )}
                 </div>
@@ -1277,6 +1277,7 @@ function Appts() {
                   <option value={10}>10 / page</option>
                   <option value={25}>25 / page</option>
                   <option value={50}>50 / page</option>
+                  <option value={100}>100 / page</option>
                 </select>
               </div>
             </div>
@@ -1313,7 +1314,7 @@ function Appts() {
                           No matching appointments found
                         </p>
                         <p className="text-xs text-stone-400 mt-1">
-                          Try resetting filters or scheduling a walk-in booking.
+                          Try resetting filters or scheduling a booking.
                         </p>
                       </td>
                     </tr>
@@ -1365,7 +1366,7 @@ function Appts() {
                                       className="btn-o text-xs py-1 px-2.5 hover:border-indigo-400 hover:text-indigo-700"
                                       title="Mark in progress (in chair)"
                                     >
-                                      <span>In Chair</span>
+                                      <ArmchairIcon className="w-3.5 h-3.5" />
                                     </button>
                                   )}
 
@@ -1377,7 +1378,7 @@ function Appts() {
                                     className="btn-brand text-xs py-1 px-2.5"
                                   >
                                     <CreditCard className="w-3.5 h-3.5" />
-                                    <span>Bill</span>
+                                    {/* <span>Bill</span> */}
                                   </button>
 
                                   <button
