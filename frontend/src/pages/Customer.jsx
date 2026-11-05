@@ -620,7 +620,8 @@ export default function Customer() {
             )}
 
             {/* Service Showcase */}
-            <div className="space-y-2.5">
+
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-stone-900 text-sm">Services Menu</h3>
                 <button
@@ -631,32 +632,42 @@ export default function Customer() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-2.5">
+              <div className="grid grid-cols-1 gap-1.5">
                 {svcs.slice(0, 4).map((s) => (
                   <div
                     key={s._id}
-                    className="card p-3.5 flex items-center justify-between gap-3 hover:border-amber-300 transition-all cursor-pointer"
+                    className="card px-1 py-2 flex items-center justify-between gap-2 hover:border-amber-300 transition-all cursor-pointer"
                     onClick={() => {
                       setSelectedServices([s]);
                       setActiveTab('book');
                     }}
                   >
-                    <div className="space-y-0.5">
-                      <h4 className="font-bold text-stone-900 text-xs sm:text-sm">{s.name}</h4>
-                      <p className="text-[11px] text-stone-500">
-                        {s.duration} mins • {s.description || 'Haircut & Styling'}
-                      </p>
+                    {/* Service Name */}
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <h4 className="font-bold text-stone-900 text-xs truncate">
+                        {s.name}
+                      </h4>
+
+                      <span className="text-[10px] text-stone-500 whitespace-nowrap shrink-0">
+                        {s.duration} min
+                      </span>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="font-extrabold text-amber-700 text-sm block">₹{s.price}</span>
-                      <span className="text-[10px] text-stone-500 font-semibold bg-stone-100 px-2 py-0.5 rounded-full inline-block mt-0.5">
-                        Book
+
+                    {/* Price + Book */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-extrabold text-amber-700 text-xs">
+                        ₹{s.price}
+                      </span>
+
+                      <span className="text-[10px] text-amber-700 font-semibold bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
+                        Book →
                       </span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+
           </div>
         )}
 
