@@ -947,9 +947,7 @@ export default function Customer() {
 
                 <div className="flex items-start justify-between gap-3 relative z-10">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full inline-block">
-                      ★ Verified Salon
-                    </span>
+
                     <h2 className="text-xl font-extrabold text-white">
                       {shopInfo?.shop?.name || 'BarberPro Lounge'}
                     </h2>
