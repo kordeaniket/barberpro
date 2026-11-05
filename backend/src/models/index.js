@@ -39,6 +39,8 @@ const BLOCKING = ['pending', 'confirmed', 'in_progress'];
 const apptSchema = new Schema({
   shopId: { ...ref('Shop'), required: true }, customerId: { ...ref('Customer'), required: true },
   serviceId: ref('Service'), serviceName: String, price: Number, staffName: String,
+  services: [{ serviceId: ref('Service'), name: String, price: Number, duration: Number }],
+  duration: Number,
   date: { type: String, required: true }, startMin: { type: Number, required: true }, endMin: { type: Number, required: true },
   status: { type: String, enum: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rejected', 'no_show'], default: 'pending' },
   blocking: { type: Boolean, default: true }, source: { type: String, default: 'barber' },

@@ -67,3 +67,31 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a29e;
 }
+
+/* Syncfusion Scheduler overrides & theme adjustments */
+.e-schedule {
+  border-radius: 1rem !important;
+  border-color: #e7e5e4 !important;
+  font-family: inherit !important;
+}
+
+.e-schedule .e-schedule-toolbar {
+  border-top-left-radius: 1rem !important;
+  border-top-right-radius: 1rem !important;
+  background-color: #fafaf9 !important;
+  border-bottom: 1px solid #e7e5e4 !important;
+}
+
+.e-schedule .e-appointment {
+  border-radius: 0.5rem !important;
+  font-size: 0.75rem !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Hide Syncfusion evaluation banner */
+div[style*="z-index: 999999999"], 
+div[style*="z-index: 99999999"],
+.e-license-banner, 
+.e-de-overlay {
+  display: none !important;
+}

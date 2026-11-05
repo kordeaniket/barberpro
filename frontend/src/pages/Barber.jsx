@@ -2,6 +2,16 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Routes, Route } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import {
+  ScheduleComponent,
+  Day,
+  Week,
+  WorkWeek,
+  Month,
+  Agenda,
+  Inject
+} from '@syncfusion/ej2-react-schedule';
+import '@syncfusion/ej2/tailwind.css';
 import api from '../api';
 import Shell, { fmt } from '../components/Shell';
 import ConfirmModal from '../components/Modal';
@@ -36,7 +46,12 @@ import {
   Building,
   KeyRound,
   ExternalLink,
-  Store
+  Store,
+  Table,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  RefreshCw
 } from 'lucide-react';
 
 const barberLinks = [
@@ -139,90 +154,254 @@ function Home() {
 
 function Appts() {
   const d = useDispatch();
-  const rows = useSelector((x) => x.ui.data.appts) || [];
   const custs = useSelector((x) => x.ui.data.customers) || [];
   const svcs = useSelector((x) => x.ui.data.services) || [];
 
-  const [f, setF] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    time: '10:00',
-    customerId: '',
-    serviceId: ''
-  });
+  // Top View Toggle: 'table' | 'calendar'
+  const [viewMode, setViewMode] = useState('table');
+
+  // Backend Pagination State for Table View
+  const [tableData, setTableData] = useState([]);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Calendar State for Syncfusion Schedule
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [selectedCalAppt, setSelectedCalAppt] = useState(null);
+
+  // Walk-in / Manual Booking Form State
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeTab, setActiveTab] = useState('all');
+  const [walkInCustId, setWalkInCustId] = useState('');
+  const [walkInServiceIds, setWalkInServiceIds] = useState([]);
+  const [walkInDate, setWalkInDate] = useState(new Date().toISOString().slice(0, 10));
+  const [walkInTime, setWalkInTime] = useState('10:00');
+  const [walkInStaff, setWalkInStaff] = useState('');
+
+  // Modals
   const [billingTarget, setBillingTarget] = useState(null);
   const [payMethod, setPayMethod] = useState('cash');
   const [statusConfirm, setStatusConfirm] = useState(null);
 
   useLive();
 
+  // Load clients and services
   useEffect(() => {
-    d(ui.actions.fetchRequest(fetchAppts));
     d(ui.actions.fetchRequest({ key: 'customers', url: '/barber/customers' }));
     d(ui.actions.fetchRequest({ key: 'services', url: '/barber/services' }));
   }, [d]);
 
-  const setStatus = (id, status) =>
-    d(ui.actions.submitRequest({ method: 'patch', url: `/barber/appointments/${id}`, body: { status }, refresh: fetchAppts }));
+  // Load backend paginated table data
+  const loadTableData = async () => {
+    setTableLoading(true);
+    try {
+      const params = {
+        page,
+        limit,
+        paginate: 'true'
+      };
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (dateFilter === 'today') {
+        params.date = new Date().toISOString().slice(0, 10);
+      } else if (dateFilter === 'tomorrow') {
+        const tmr = new Date();
+        tmr.setDate(tmr.getDate() + 1);
+        params.date = tmr.toISOString().slice(0, 10);
+      } else if (dateFilter !== 'all' && dateFilter) {
+        params.date = dateFilter;
+      }
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
 
-  const confirmBill = () => {
-    if (billingTarget) {
-      d(ui.actions.submitRequest({
-        url: '/barber/invoices',
-        body: { appointmentId: billingTarget._id, method: payMethod },
-        refresh: fetchAppts
-      }));
-      setBillingTarget(null);
+      const res = await api.get('/barber/appointments', { params });
+      if (res.data && res.data.appointments) {
+        setTableData(res.data.appointments);
+        setTotalCount(res.data.total || 0);
+        setTotalPages(res.data.totalPages || 1);
+      } else if (Array.isArray(res.data)) {
+        setTableData(res.data);
+        setTotalCount(res.data.length);
+        setTotalPages(1);
+      }
+    } catch (err) {
+      console.error('Failed to load appointments', err);
+    } finally {
+      setTableLoading(false);
     }
   };
 
-  const add = (e) => {
-    e.preventDefault();
-    const [h, m] = f.time.split(':');
-    d(
-      ui.actions.submitRequest({
-        url: '/barber/appointments',
-        body: {
-          customerId: f.customerId,
-          serviceId: f.serviceId,
-          date: f.date,
-          startMin: parseInt(h, 10) * 60 + parseInt(m, 10)
-        },
-        refresh: fetchAppts
-      })
-    );
-    setShowAddForm(false);
+  // Load full list for Syncfusion Calendar View
+  const loadCalendarData = async () => {
+    setCalendarLoading(true);
+    try {
+      const res = await api.get('/barber/appointments', { params: { calendar: 'true' } });
+      const rawList = Array.isArray(res.data) ? res.data : (res.data?.appointments || []);
+      
+      const mapped = rawList.map((a) => {
+        const [y, m, d] = (a.date || new Date().toISOString().slice(0, 10)).split('-').map(Number);
+        const sH = Math.floor(a.startMin / 60);
+        const sM = a.startMin % 60;
+        const eH = Math.floor((a.endMin || a.startMin + (a.duration || 30)) / 60);
+        const eM = (a.endMin || a.startMin + (a.duration || 30)) % 60;
+
+        const start = new Date(y, m - 1, d, sH, sM);
+        const end = new Date(y, m - 1, d, eH, eM);
+
+        let color = '#d97706'; // amber
+        if (a.status === 'completed') color = '#059669'; // emerald
+        else if (a.status === 'in_progress') color = '#4f46e5'; // indigo
+        else if (a.status === 'pending') color = '#ea580c'; // orange
+        else if (['cancelled', 'rejected', 'no_show'].includes(a.status)) color = '#78716c'; // stone
+
+        return {
+          Id: a._id,
+          Subject: `${a.customerId?.name || 'Walk-in'} • ${a.serviceName}`,
+          StartTime: start,
+          EndTime: end,
+          Description: `Client: ${a.customerId?.name || 'Walk-in'} (${a.customerId?.mobile || 'No mobile'})\nStatus: ${a.status}\nPrice: ₹${a.price}`,
+          CategoryColor: color,
+          Location: a.staffName ? `Staff: ${a.staffName}` : 'Main Chair',
+          Raw: a
+        };
+      });
+
+      setCalendarEvents(mapped);
+    } catch (err) {
+      console.error('Failed to load calendar events', err);
+    } finally {
+      setCalendarLoading(false);
+    }
   };
 
-  const filtered = rows.filter((r) => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'pending') return r.status === 'pending';
-    if (activeTab === 'confirmed') return ['confirmed', 'in_progress'].includes(r.status);
-    if (activeTab === 'completed') return r.status === 'completed';
-    if (activeTab === 'cancelled') return ['cancelled', 'rejected', 'no_show'].includes(r.status);
-    return true;
-  });
+  // Reload table data when pagination/filters change
+  useEffect(() => {
+    if (viewMode === 'table') {
+      loadTableData();
+    }
+  }, [page, limit, statusFilter, dateFilter, searchQuery, viewMode]);
+
+  // Reload calendar data when switching to calendar
+  useEffect(() => {
+    if (viewMode === 'calendar') {
+      loadCalendarData();
+    }
+  }, [viewMode]);
+
+  // Refresh both views
+  const refreshAll = () => {
+    loadTableData();
+    if (viewMode === 'calendar') loadCalendarData();
+  };
+
+  // Status changer
+  const setStatus = async (id, status) => {
+    try {
+      await api.patch(`/barber/appointments/${id}`, { status });
+      d(ui.actions.setMsg({ type: 'ok', text: `Appointment status updated to ${status}` }));
+      refreshAll();
+    } catch (e) {
+      d(ui.actions.setMsg({ type: 'error', text: e.response?.data?.message || 'Failed to update' }));
+    }
+  };
+
+  // Invoice / Bill complete
+  const confirmBill = async () => {
+    if (billingTarget) {
+      try {
+        const res = await api.post('/barber/invoices', {
+          appointmentId: billingTarget._id,
+          method: payMethod
+        });
+        d(ui.actions.setMsg({ type: 'ok', text: res.data.message || 'Invoice generated' }));
+        setBillingTarget(null);
+        setSelectedCalAppt(null);
+        refreshAll();
+      } catch (e) {
+        d(ui.actions.setMsg({ type: 'error', text: e.response?.data?.message || 'Billing failed' }));
+      }
+    }
+  };
+
+  // Multi-service walk-in calculations
+  const selectedWalkInSvcs = svcs.filter((s) => walkInServiceIds.includes(s._id));
+  const walkInTotalDuration = selectedWalkInSvcs.reduce((sum, s) => sum + (s.duration || 30), 0);
+  const walkInTotalPrice = selectedWalkInSvcs.reduce((sum, s) => sum + (s.price || 0), 0);
+
+  const toggleWalkInService = (id) => {
+    setWalkInServiceIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  // Add Walk-in / Manual Booking
+  const handleAddWalkIn = async (e) => {
+    e.preventDefault();
+    if (!walkInCustId) {
+      d(ui.actions.setMsg({ type: 'error', text: 'Please select a client' }));
+      return;
+    }
+    if (walkInServiceIds.length === 0) {
+      d(ui.actions.setMsg({ type: 'error', text: 'Please select at least one service' }));
+      return;
+    }
+
+    const [h, m] = walkInTime.split(':');
+    const startMin = parseInt(h, 10) * 60 + parseInt(m, 10);
+
+    try {
+      await api.post('/barber/appointments', {
+        customerId: walkInCustId,
+        serviceIds: walkInServiceIds,
+        serviceId: walkInServiceIds[0],
+        date: walkInDate,
+        startMin,
+        staffName: walkInStaff || undefined
+      });
+      d(ui.actions.setMsg({ type: 'ok', text: 'Walk-in appointment scheduled successfully!' }));
+      setShowAddForm(false);
+      setWalkInServiceIds([]);
+      setWalkInCustId('');
+      refreshAll();
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Booking conflict or error' }));
+    }
+  };
 
   return (
     <Shell
       title="Appointment Management"
-      subtitle="Schedule walk-in bookings and process client requests"
+      subtitle="Comprehensive scheduling, calendar planner & server-side paginated records"
       links={barberLinks}
       actions={
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="btn-brand"
-        >
-          {showAddForm ? <XCircle className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          <span>{showAddForm ? 'Close Form' : 'New Walk-In Booking'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refreshAll()}
+            className="btn-o p-2.5 text-stone-600 hover:text-stone-900"
+            title="Refresh Appointments"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="btn-brand"
+          >
+            {showAddForm ? <XCircle className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            <span>{showAddForm ? 'Close Form' : 'New Walk-In Booking'}</span>
+          </button>
+        </div>
       }
     >
-      {/* Walk-in Form Collapsible Card */}
+      {/* Walk-in Form Collapsible Card with Multi-Service Selection & Duration Calculation */}
       {showAddForm && (
         <form
-          onSubmit={add}
+          onSubmit={handleAddWalkIn}
           className="card border-amber-200 bg-amber-50/20 p-5 space-y-4 animate-in fade-in duration-200"
         >
           <div className="flex items-center justify-between pb-2 border-b border-amber-100">
@@ -230,17 +409,18 @@ function Appts() {
               <Calendar className="w-4 h-4 text-amber-600" />
               <span>Schedule Walk-In / Manual Appointment</span>
             </h3>
-            <span className="text-xs text-stone-500">* Required</span>
+            <span className="text-xs text-stone-500">* All fields required</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Client selection */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-600">Client *</label>
+              <label className="text-xs font-semibold text-stone-700">Client *</label>
               <select
                 required
                 className="inp"
-                value={f.customerId}
-                onChange={(e) => setF({ ...f, customerId: e.target.value })}
+                value={walkInCustId}
+                onChange={(e) => setWalkInCustId(e.target.value)}
               >
                 <option value="">Select Client</option>
                 {custs.map((c) => (
@@ -251,47 +431,84 @@ function Appts() {
               </select>
             </div>
 
+            {/* Date */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-600">Service *</label>
-              <select
-                required
-                className="inp"
-                value={f.serviceId}
-                onChange={(e) => setF({ ...f, serviceId: e.target.value })}
-              >
-                <option value="">Select Service</option>
-                {svcs.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name} - ₹{c.price} ({c.duration}m)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-600">Date *</label>
+              <label className="text-xs font-semibold text-stone-700">Date *</label>
               <input
                 type="date"
                 required
                 className="inp"
-                value={f.date}
-                onChange={(e) => setF({ ...f, date: e.target.value })}
+                value={walkInDate}
+                onChange={(e) => setWalkInDate(e.target.value)}
               />
             </div>
 
+            {/* Start Time */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-600">Time *</label>
+              <label className="text-xs font-semibold text-stone-700">Start Time *</label>
               <input
                 type="time"
                 required
                 className="inp"
-                value={f.time}
-                onChange={(e) => setF({ ...f, time: e.target.value })}
+                value={walkInTime}
+                onChange={(e) => setWalkInTime(e.target.value)}
+              />
+            </div>
+
+            {/* Optional Staff */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-stone-700">Assigned Stylist / Staff</label>
+              <input
+                type="text"
+                placeholder="e.g. Master Barber Alex"
+                className="inp"
+                value={walkInStaff}
+                onChange={(e) => setWalkInStaff(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          {/* Multi-Service Selector with Duration Calculation */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-stone-700">
+                Select Services (Multi-select) *
+              </label>
+              {selectedWalkInSvcs.length > 0 && (
+                <span className="text-xs font-bold text-amber-800 bg-amber-100/70 px-2.5 py-0.5 rounded-md">
+                  {selectedWalkInSvcs.length} selected • ⏱️ {walkInTotalDuration} mins approx • Total: ₹{walkInTotalPrice}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {svcs.map((s) => {
+                const isChecked = walkInServiceIds.includes(s._id);
+                return (
+                  <button
+                    type="button"
+                    key={s._id}
+                    onClick={() => toggleWalkInService(s._id)}
+                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-xs ${
+                      isChecked
+                        ? 'border-amber-600 bg-amber-50 text-amber-950 font-bold ring-1 ring-amber-600/50'
+                        : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+                    }`}
+                  >
+                    <div>
+                      <span className="block truncate">{s.name}</span>
+                      <span className="text-[10px] text-stone-400 font-normal">
+                        ⏱️ {s.duration}m • ₹{s.price}
+                      </span>
+                    </div>
+                    {isChecked && <Check className="w-4 h-4 text-amber-600 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-amber-100">
             <button
               type="button"
               className="btn-o"
@@ -300,173 +517,546 @@ function Appts() {
               Cancel
             </button>
             <button type="submit" className="btn-brand">
-              Confirm Booking
+              <span>Schedule Walk-In ({walkInTotalDuration}m • ₹{walkInTotalPrice})</span>
             </button>
           </div>
         </form>
       )}
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-stone-200/60 rounded-xl max-w-fit overflow-x-auto text-xs font-medium">
-        {[
-          { id: 'all', label: `All (${rows.length})` },
-          { id: 'pending', label: `Pending (${rows.filter((r) => r.status === 'pending').length})` },
-          { id: 'confirmed', label: 'Active & Confirmed' },
-          { id: 'completed', label: 'Completed' },
-          { id: 'cancelled', label: 'Cancelled' }
-        ].map((tab) => (
+      {/* Main Tabs Header: Table List View vs Calendar View */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-stone-200">
+        <div className="flex items-center gap-2 p-1 bg-stone-200/70 rounded-2xl w-fit">
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
-              ? 'bg-white text-stone-900 shadow-sm font-semibold'
-              : 'text-stone-600 hover:text-stone-900'
-              }`}
+            onClick={() => setViewMode('table')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+              viewMode === 'table'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
           >
-            {tab.label}
+            <Table className="w-4 h-4 text-amber-600" />
+            <span>Table View (Paginated)</span>
           </button>
-        ))}
+          <button
+            onClick={() => setViewMode('calendar')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+              viewMode === 'calendar'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            <Calendar className="w-4 h-4 text-amber-600" />
+            <span>Calendar Planner (Syncfusion)</span>
+          </button>
+        </div>
+
+        <span className="text-xs font-medium text-stone-500">
+          {viewMode === 'table' ? `Total Appointments: ${totalCount}` : `Scheduled Events: ${calendarEvents.length}`}
+        </span>
       </div>
 
-      {/* Appointments List */}
-      <div className="space-y-3">
-        {filtered.length === 0 ? (
-          <div className="card text-center py-12 px-4 space-y-2">
-            <Calendar className="w-10 h-10 text-stone-300 mx-auto" />
-            <p className="font-semibold text-stone-800 text-sm">No appointments in this view</p>
-            <p className="text-xs text-stone-500">
-              New client bookings or walk-ins will appear here in real-time.
-            </p>
-          </div>
-        ) : (
-          filtered.map((a) => (
-            <div
-              key={a._id}
-              className="card card-hover flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-            >
-              <div className="flex items-start gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200/70 flex items-center justify-center font-bold text-sm shrink-0">
-                  {a.customerId?.name ? a.customerId.name[0].toUpperCase() : <User className="w-5 h-5" />}
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-stone-900 text-base">
-                      {a.customerId?.name || 'Walk-In Client'}
-                    </span>
-                    <span className="text-xs font-semibold text-stone-600 px-2 py-0.5 rounded-md bg-stone-100">
-                      {a.serviceName}
-                    </span>
-                    <span className="text-xs font-bold text-amber-800 px-2 py-0.5 rounded-md bg-amber-50">
-                      ₹{a.price}
-                    </span>
-                    <StatusBadge status={a.status} />
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs text-stone-500 flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                      <span>{a.date}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-stone-400" />
-                      <span>
-                        {fmt(a.startMin)} – {fmt(a.endMin)}
-                      </span>
-                    </span>
-                    {a.customerId?.mobile && (
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3.5 h-3.5 text-stone-400" />
-                        <span>{a.customerId.mobile}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
+      {/* ================= VIEW 1: TABLE VIEW (SERVER-SIDE PAGINATION) ================= */}
+      {viewMode === 'table' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          {/* Table Filters & Search Bar */}
+          <div className="card p-4 space-y-3">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search by client name, mobile phone, service..."
+                  className="inp pl-9 text-xs"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
+                />
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
-                {a.status === 'pending' && (
-                  <>
-                    <button
-                      className="btn-brand text-xs py-1.5 px-3"
-                      onClick={() => setStatus(a._id, 'confirmed')}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Accept</span>
-                    </button>
-                    <button
-                      className="btn-danger text-xs py-1.5 px-3"
-                      onClick={() =>
-                        setStatusConfirm({
-                          id: a._id,
-                          status: 'rejected',
-                          label: `reject appointment for ${a.customerId?.name || 'this client'}`,
-                          type: 'danger',
-                          confirmText: 'Reject Appointment'
-                        })
-                      }
-                    >
-                      <XCircle className="w-3.5 h-3.5" />
-                      <span>Reject</span>
-                    </button>
-                  </>
-                )}
+              {/* Status and Date Quick Selectors */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  className="inp w-auto text-xs py-2 px-3"
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed & In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
 
-                {['confirmed', 'in_progress'].includes(a.status) && (
-                  <>
-                    <button
-                      className="btn-brand text-xs py-1.5 px-3"
-                      onClick={() => {
-                        setPayMethod('cash');
-                        setBillingTarget(a);
-                      }}
-                    >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Complete & Bill</span>
-                    </button>
-                    <button
-                      className="btn-o text-xs py-1.5 px-3"
-                      onClick={() =>
-                        setStatusConfirm({
-                          id: a._id,
-                          status: 'no_show',
-                          label: `mark ${a.customerId?.name || 'this client'} as No-Show`,
-                          type: 'warning',
-                          confirmText: 'Mark No-Show'
-                        })
-                      }
-                    >
-                      <span>No-Show</span>
-                    </button>
-                    <button
-                      className="btn-danger text-xs py-1.5 px-3"
-                      onClick={() =>
-                        setStatusConfirm({
-                          id: a._id,
-                          status: 'cancelled',
-                          label: `cancel appointment for ${a.customerId?.name || 'this client'}`,
-                          type: 'danger',
-                          confirmText: 'Cancel Appointment'
-                        })
-                      }
-                    >
-                      <span>Cancel</span>
-                    </button>
-                  </>
-                )}
+                <select
+                  className="inp w-auto text-xs py-2 px-3"
+                  value={dateFilter}
+                  onChange={(e) => {
+                    setDateFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="tomorrow">Tomorrow</option>
+                </select>
 
-                {a.status === 'completed' && (
-                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Paid & Closed</span>
-                  </span>
-                )}
+                <select
+                  className="inp w-auto text-xs py-2 px-3"
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                >
+                  <option value={10}>10 per page</option>
+                  <option value={25}>25 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          </div>
+
+          {/* Paginated Data Table */}
+          <div className="card p-0 overflow-hidden border border-stone-200">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-200 text-stone-600 font-semibold uppercase tracking-wider text-[11px]">
+                    <th className="py-3.5 px-4">Client</th>
+                    <th className="py-3.5 px-4">Service & Duration</th>
+                    <th className="py-3.5 px-4">Date & Slot</th>
+                    <th className="py-3.5 px-4">Amount</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {tableLoading ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-stone-400">
+                        <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-amber-600" />
+                        <span>Loading appointments...</span>
+                      </td>
+                    </tr>
+                  ) : tableData.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-stone-400">
+                        <Calendar className="w-8 h-8 text-stone-300 mx-auto mb-2" />
+                        <p className="font-semibold text-stone-700 text-sm">No matching appointments found</p>
+                        <p className="text-xs text-stone-400 mt-1">Try resetting filters or scheduling a walk-in booking.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    tableData.map((a) => {
+                      const duration = a.duration || (a.endMin - a.startMin) || 30;
+                      return (
+                        <tr key={a._id} className="hover:bg-amber-50/30 transition-colors">
+                          {/* Client */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center shrink-0 text-xs">
+                                {a.customerId?.name ? a.customerId.name[0].toUpperCase() : 'C'}
+                              </div>
+                              <div>
+                                <span className="font-bold text-stone-900 block leading-tight">
+                                  {a.customerId?.name || 'Walk-In Client'}
+                                </span>
+                                {a.customerId?.mobile && (
+                                  <a
+                                    href={`tel:${a.customerId.mobile}`}
+                                    className="text-[11px] text-stone-500 hover:text-amber-700 flex items-center gap-1 mt-0.5"
+                                  >
+                                    <Phone className="w-3 h-3" />
+                                    <span>{a.customerId.mobile}</span>
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Services & Duration */}
+                          <td className="py-3.5 px-4">
+                            <div>
+                              <span className="font-semibold text-stone-900 block leading-tight">
+                                {a.serviceName}
+                              </span>
+                              <span className="text-[11px] text-stone-500 flex items-center gap-1 mt-0.5">
+                                <Clock className="w-3 h-3 text-stone-400" />
+                                <span>{duration} mins approx</span>
+                                {a.staffName && <span className="text-amber-700 font-medium">• {a.staffName}</span>}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Date & Slot */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span className="font-bold text-stone-800 block text-xs">{a.date}</span>
+                            <span className="text-[11px] text-stone-500">
+                              {fmt(a.startMin)} – {fmt(a.endMin)}
+                            </span>
+                          </td>
+
+                          {/* Amount */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span className="font-extrabold text-stone-900 block text-xs">₹{a.price}</span>
+                            <span className="text-[10px] text-stone-400 uppercase font-semibold">
+                              {a.source === 'online' ? 'Online' : 'Walk-in'}
+                            </span>
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <StatusBadge status={a.status} />
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {a.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={() => setStatus(a._id, 'confirmed')}
+                                    className="btn-brand text-xs py-1 px-2.5"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Accept</span>
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setStatusConfirm({
+                                        id: a._id,
+                                        status: 'rejected',
+                                        label: `reject appointment for ${a.customerId?.name || 'this client'}`,
+                                        type: 'danger',
+                                        confirmText: 'Reject'
+                                      })
+                                    }
+                                    className="btn-danger text-xs py-1 px-2.5"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+
+                              {['confirmed', 'in_progress'].includes(a.status) && (
+                                <>
+                                  {a.status === 'confirmed' && (
+                                    <button
+                                      onClick={() => setStatus(a._id, 'in_progress')}
+                                      className="btn-o text-xs py-1 px-2.5 hover:border-indigo-400 hover:text-indigo-700"
+                                      title="Mark in progress (in chair)"
+                                    >
+                                      <span>In Chair</span>
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      setPayMethod('cash');
+                                      setBillingTarget(a);
+                                    }}
+                                    className="btn-brand text-xs py-1 px-2.5"
+                                  >
+                                    <CreditCard className="w-3.5 h-3.5" />
+                                    <span>Bill</span>
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setStatusConfirm({
+                                        id: a._id,
+                                        status: 'cancelled',
+                                        label: `cancel appointment for ${a.customerId?.name || 'this client'}`,
+                                        type: 'danger',
+                                        confirmText: 'Cancel'
+                                      })
+                                    }
+                                    className="btn-o text-xs py-1 px-2 text-stone-400 hover:text-red-600 hover:border-red-200"
+                                    title="Cancel"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+
+                              {a.status === 'completed' && (
+                                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Paid</span>
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Backend Pagination Bar */}
+            <div className="p-4 bg-stone-50 border-t border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-stone-600">
+              <div>
+                Showing{' '}
+                <span className="font-bold text-stone-900">
+                  {totalCount === 0 ? 0 : (page - 1) * limit + 1}
+                </span>{' '}
+                to{' '}
+                <span className="font-bold text-stone-900">
+                  {Math.min(page * limit, totalCount)}
+                </span>{' '}
+                of <span className="font-bold text-stone-900">{totalCount}</span> appointments
+              </div>
+
+              {/* Page Number Buttons */}
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="btn-o p-1.5 text-xs disabled:opacity-40"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
+                  let pNum;
+                  if (totalPages <= 5) {
+                    pNum = idx + 1;
+                  } else if (page <= 3) {
+                    pNum = idx + 1;
+                  } else if (page >= totalPages - 2) {
+                    pNum = totalPages - 4 + idx;
+                  } else {
+                    pNum = page - 2 + idx;
+                  }
+
+                  return (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setPage(pNum)}
+                      className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${
+                        page === pNum
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-300'
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="btn-o p-1.5 text-xs disabled:opacity-40"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= VIEW 2: CALENDAR SCHEDULER (SYNCFUSION) ================= */}
+      {viewMode === 'calendar' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="card p-3 sm:p-4 bg-white border border-stone-200 shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-stone-100">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-stone-900 text-sm sm:text-base">
+                  Interactive Salon Appointment Calendar
+                </h3>
+              </div>
+
+              {/* Status color legends */}
+              <div className="flex items-center gap-3 text-[11px] font-medium text-stone-500 flex-wrap">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
+                  <span>Completed</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block" />
+                  <span>Confirmed</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block" />
+                  <span>In Chair</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" />
+                  <span>Pending</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Syncfusion Scheduler Component */}
+            <div className="rounded-2xl overflow-hidden border border-stone-200 bg-white">
+              {calendarLoading ? (
+                <div className="p-16 text-center text-stone-400">
+                  <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-amber-600" />
+                  <p className="text-sm font-semibold text-stone-700">Loading scheduler...</p>
+                </div>
+              ) : (
+                <ScheduleComponent
+                  height="650px"
+                  selectedDate={new Date()}
+                  eventSettings={{
+                    dataSource: calendarEvents,
+                    fields: {
+                      id: 'Id',
+                      subject: { name: 'Subject' },
+                      startTime: { name: 'StartTime' },
+                      endTime: { name: 'EndTime' },
+                      description: { name: 'Description' }
+                    }
+                  }}
+                  eventClick={(args) => {
+                    if (args.event?.Raw) {
+                      setSelectedCalAppt(args.event.Raw);
+                    }
+                  }}
+                  startHour="08:00"
+                  endHour="22:00"
+                  readonly={false}
+                >
+                  <Inject services={[Day, Week, WorkWeek, Month, Agenda]} />
+                </ScheduleComponent>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selected Calendar Event Details Modal */}
+      {selectedCalAppt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-xs animate-in fade-in">
+          <div className="card max-w-md w-full space-y-4 shadow-float border border-stone-200">
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+              <div className="flex items-center gap-2">
+                <Scissors className="w-4 h-4 text-amber-600" />
+                <h3 className="font-bold text-stone-900 text-sm">Appointment Details</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCalAppt(null)}
+                className="p-1 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200/80 space-y-2">
+                <div className="flex justify-between items-center pb-1.5 border-b border-stone-200">
+                  <span className="text-stone-500">Client Name</span>
+                  <span className="font-bold text-stone-900">{selectedCalAppt.customerId?.name || 'Walk-In'}</span>
+                </div>
+                {selectedCalAppt.customerId?.mobile && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-500">Mobile Phone</span>
+                    <a href={`tel:${selectedCalAppt.customerId.mobile}`} className="font-bold text-amber-700">
+                      {selectedCalAppt.customerId.mobile}
+                    </a>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-500">Service(s)</span>
+                  <span className="font-bold text-stone-900">{selectedCalAppt.serviceName}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-500">Date & Slot</span>
+                  <span className="font-bold text-stone-800">
+                    {selectedCalAppt.date} ({fmt(selectedCalAppt.startMin)} – {fmt(selectedCalAppt.endMin)})
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-500">Duration</span>
+                  <span className="font-medium text-stone-700">
+                    {selectedCalAppt.duration || (selectedCalAppt.endMin - selectedCalAppt.startMin) || 30} mins
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-500">Current Status</span>
+                  <StatusBadge status={selectedCalAppt.status} />
+                </div>
+                <div className="flex justify-between items-center pt-1.5 border-t border-stone-200 text-sm">
+                  <span className="font-bold text-stone-900">Total Price</span>
+                  <span className="font-extrabold text-amber-800 text-base">₹{selectedCalAppt.price}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons inside details modal */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 flex-wrap">
+              {selectedCalAppt.status === 'pending' && (
+                <button
+                  type="button"
+                  className="btn-brand text-xs py-2 px-3"
+                  onClick={() => {
+                    setStatus(selectedCalAppt._id, 'confirmed');
+                    setSelectedCalAppt(null);
+                  }}
+                >
+                  Confirm Appointment
+                </button>
+              )}
+
+              {['confirmed', 'in_progress'].includes(selectedCalAppt.status) && (
+                <>
+                  <button
+                    type="button"
+                    className="btn-brand text-xs py-2 px-3"
+                    onClick={() => {
+                      setPayMethod('cash');
+                      setBillingTarget(selectedCalAppt);
+                      setSelectedCalAppt(null);
+                    }}
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>Generate Bill</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger text-xs py-2 px-3"
+                    onClick={() => {
+                      setStatusConfirm({
+                        id: selectedCalAppt._id,
+                        status: 'cancelled',
+                        label: `cancel appointment for ${selectedCalAppt.customerId?.name || 'this client'}`,
+                        type: 'danger',
+                        confirmText: 'Cancel Appointment'
+                      });
+                      setSelectedCalAppt(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+
+              <button
+                type="button"
+                className="btn-o text-xs py-2 px-3"
+                onClick={() => setSelectedCalAppt(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Payment Method Billing Modal */}
       <ConfirmModal
@@ -497,10 +1087,11 @@ function Appts() {
                 key={m.id}
                 type="button"
                 onClick={() => setPayMethod(m.id)}
-                className={`py-2 px-3 rounded-xl border text-center transition-all ${payMethod === m.id
-                  ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold ring-1 ring-amber-600'
-                  : 'border-stone-200 hover:border-stone-300 text-stone-700'
-                  }`}
+                className={`py-2 px-3 rounded-xl border text-center transition-all ${
+                  payMethod === m.id
+                    ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold ring-1 ring-amber-600'
+                    : 'border-stone-200 hover:border-stone-300 text-stone-700'
+                }`}
               >
                 {m.label}
               </button>

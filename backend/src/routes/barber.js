@@ -52,16 +52,117 @@ r.get('/dashboard', wrap(async (req, res) => {
   const [total, completed, pending, cancelled, customers, todaySales, monthSales] = await Promise.all([cnt(), cnt('completed'), Appointment.countDocuments({ shopId: s, status: 'pending' }), cnt('cancelled'), Customer.countDocuments({ shopId: s, deleted: false }), sum(new Date(d)), sum(new Date(m + '-01'))]);
   res.json({ total, completed, pending, cancelled, customers, todaySales, monthSales });
 }));
-r.get('/appointments', wrap(async (req, res) => res.json(await Appointment.find({ shopId: req.shopId }).populate('customerId', 'name mobile').sort('-date -startMin').limit(200))));
+r.get('/appointments', wrap(async (req, res) => {
+  // Calendar mode or unpaginated full list
+  if (req.query.calendar === 'true' || req.query.all === 'true') {
+    const list = await Appointment.find({ shopId: req.shopId })
+      .populate('customerId', 'name mobile email')
+      .sort('-date -startMin');
+    return res.json(list);
+  }
+
+  const query = { shopId: req.shopId };
+
+  // Status filter
+  if (req.query.status && req.query.status !== 'all') {
+    if (req.query.status === 'confirmed') {
+      query.status = { $in: ['confirmed', 'in_progress'] };
+    } else if (req.query.status === 'cancelled') {
+      query.status = { $in: ['cancelled', 'rejected', 'no_show'] };
+    } else {
+      query.status = req.query.status;
+    }
+  }
+
+  // Date filter
+  if (req.query.date && req.query.date !== 'all') {
+    query.date = req.query.date;
+  }
+
+  // Search filter (client name or mobile or serviceName)
+  if (req.query.search && req.query.search.trim()) {
+    const sRegex = new RegExp(req.query.search.trim(), 'i');
+    const matchingCusts = await Customer.find({
+      shopId: req.shopId,
+      $or: [{ name: sRegex }, { mobile: sRegex }]
+    }).select('_id');
+    const custIds = matchingCusts.map((c) => c._id);
+    query.$or = [
+      { serviceName: sRegex },
+      { customerId: { $in: custIds } }
+    ];
+  }
+
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 10));
+  const skip = (page - 1) * limit;
+
+  const [total, appointments] = await Promise.all([
+    Appointment.countDocuments(query),
+    Appointment.find(query)
+      .populate('customerId', 'name mobile email')
+      .sort('-date -startMin')
+      .skip(skip)
+      .limit(limit)
+  ]);
+
+  // Backward compatibility: If no page or paginate query is sent, return raw array
+  if (!req.query.page && !req.query.limit && !req.query.paginate) {
+    return res.json(appointments);
+  }
+
+  res.json({
+    appointments,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  });
+}));
+
 r.post('/appointments', wrap(async (req, res) => {
-  need(req.body, ['customerId', 'serviceId', 'date', 'startMin']);
-  const [svc, cust] = await Promise.all([Service.findOne({ _id: req.body.serviceId, shopId: req.shopId }), Customer.findOne({ _id: req.body.customerId, shopId: req.shopId })]);
-  if (!svc || !cust) return res.status(404).json({ message: 'Service or customer not found in your shop' });
-  const start = Number(req.body.startMin), end = start + svc.duration;
+  need(req.body, ['customerId', 'date', 'startMin']);
+  let svcIds = [];
+  if (Array.isArray(req.body.serviceIds) && req.body.serviceIds.length) {
+    svcIds = req.body.serviceIds;
+  } else if (typeof req.body.serviceIds === 'string' && req.body.serviceIds.trim()) {
+    svcIds = req.body.serviceIds.split(',').map((id) => id.trim()).filter(Boolean);
+  } else if (req.body.serviceId) {
+    svcIds = [req.body.serviceId];
+  } else {
+    return res.status(400).json({ message: 'Select at least one service' });
+  }
+
+  const [svcs, cust] = await Promise.all([
+    Service.find({ _id: { $in: svcIds }, shopId: req.shopId }),
+    Customer.findOne({ _id: req.body.customerId, shopId: req.shopId })
+  ]);
+  if (!svcs.length || !cust) return res.status(404).json({ message: 'Service or customer not found in your shop' });
+
+  const totalDuration = svcs.reduce((sum, s) => sum + (s.duration || 30), 0);
+  const totalPrice = svcs.reduce((sum, s) => sum + (s.price || 0), 0);
+  const serviceNames = svcs.map((s) => s.name).join(' + ');
+
+  const start = Number(req.body.startMin);
+  const end = start + totalDuration;
   const booked = await Appointment.find({ shopId: req.shopId, date: req.body.date, blocking: true });
   if (hasConflict(booked, start, end)) return res.status(409).json({ message: 'Time slot already booked' });
-  const a = await Appointment.create({ shopId: req.shopId, customerId: cust._id, serviceId: svc._id, serviceName: svc.name, price: svc.price, date: req.body.date, startMin: start, endMin: end, status: 'confirmed', staffName: req.body.staffName });
-  res.status(201).json({ data: a, message: 'Appointment created' });
+
+  const a = await Appointment.create({
+    shopId: req.shopId,
+    customerId: cust._id,
+    serviceId: svcs[0]._id,
+    serviceName: serviceNames,
+    services: svcs.map((s) => ({ serviceId: s._id, name: s.name, price: s.price, duration: s.duration })),
+    duration: totalDuration,
+    price: totalPrice,
+    date: req.body.date,
+    startMin: start,
+    endMin: end,
+    status: 'confirmed',
+    staffName: req.body.staffName
+  });
+  res.status(201).json({ data: a, message: `Appointment scheduled for ${cust.name} (${totalDuration}m, ₹${totalPrice})` });
 }));
 r.patch('/appointments/:id', wrap(async (req, res) => {
   const ok = ['confirmed', 'in_progress', 'cancelled', 'rejected', 'no_show', 'completed'];
@@ -79,7 +180,10 @@ r.post('/invoices', wrap(async (req, res) => {
   if (!a) return res.status(404).json({ message: 'Not found' });
   const discount = Number(req.body.discount || 0), taxPct = Number(req.body.taxPct || 0);
   const total = Math.max(0, (a.price - discount) * (1 + taxPct / 100));
-  const inv = await Invoice.create({ shopId: req.shopId, appointmentId: a._id, customerId: a.customerId, items: [{ name: a.serviceName, price: a.price }], discount, taxPct, total, method: req.body.method || 'cash' });
+  const items = (a.services && a.services.length)
+    ? a.services.map((s) => ({ name: s.name, price: s.price }))
+    : [{ name: a.serviceName, price: a.price }];
+  const inv = await Invoice.create({ shopId: req.shopId, appointmentId: a._id, customerId: a.customerId, items, discount, taxPct, total, method: req.body.method || 'cash' });
   a.status = 'completed'; await a.save();
   await Customer.updateOne({ _id: a.customerId, shopId: req.shopId }, { $inc: { loyaltyPoints: Math.floor(total / 100) } });
   res.status(201).json({ data: inv, message: 'Bill generated: ₹' + total });

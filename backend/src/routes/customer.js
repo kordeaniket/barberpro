@@ -17,11 +17,29 @@ r.get('/public/shop/:code', wrap(async (req, res) => {
   });
 }));
 r.get('/public/slots', wrap(async (req, res) => {
-  const s = await shopByCode(req.query.code); const svc = s && await Service.findOne({ _id: req.query.serviceId, shopId: s._id });
-  if (!svc) return res.status(404).json({ message: 'Not found' });
-  if (s.holidays.includes(new Date(req.query.date).getDay())) return res.json([]);
+  const s = await shopByCode(req.query.code);
+  if (!s) return res.status(404).json({ message: 'Shop not found' });
+
+  let duration = 30;
+  if (req.query.duration && Number(req.query.duration) > 0) {
+    duration = Number(req.query.duration);
+  } else if (req.query.serviceIds) {
+    const rawIds = Array.isArray(req.query.serviceIds)
+      ? req.query.serviceIds
+      : String(req.query.serviceIds).split(',').map((id) => id.trim()).filter(Boolean);
+    const svcs = await Service.find({ _id: { $in: rawIds }, shopId: s._id });
+    if (svcs.length > 0) {
+      duration = svcs.reduce((acc, x) => acc + (x.duration || 30), 0);
+    }
+  } else if (req.query.serviceId) {
+    const svc = await Service.findOne({ _id: req.query.serviceId, shopId: s._id });
+    if (!svc) return res.status(404).json({ message: 'Service not found' });
+    duration = svc.duration || 30;
+  }
+
+  if (s.holidays && s.holidays.includes(new Date(req.query.date).getDay())) return res.json([]);
   const booked = await Appointment.find({ shopId: s._id, date: req.query.date, blocking: true });
-  res.json(genSlots({ openMin: s.openMin, closeMin: s.closeMin, duration: svc.duration, booked }));
+  res.json(genSlots({ openMin: s.openMin, closeMin: s.closeMin, duration, booked }));
 }));
 r.use(auth('customer'));
 
@@ -53,16 +71,52 @@ r.patch('/profile', wrap(async (req, res) => {
 }));
 
 r.post('/bookings', wrap(async (req, res) => {
-  need(req.body, ['serviceId', 'date', 'startMin']);
-  const svc = await Service.findOne({ _id: req.body.serviceId, shopId: req.shopId, active: true });
-  const cust = await Customer.findOne({ shopId: req.shopId, userId: req.user._id });
-  if (!svc || !cust) return res.status(404).json({ message: 'Not found' });
-  const start = Number(req.body.startMin), end = start + svc.duration;
+  need(req.body, ['date', 'startMin']);
+  let svcIds = [];
+  if (Array.isArray(req.body.serviceIds) && req.body.serviceIds.length) {
+    svcIds = req.body.serviceIds;
+  } else if (typeof req.body.serviceIds === 'string' && req.body.serviceIds.trim()) {
+    svcIds = req.body.serviceIds.split(',').map((id) => id.trim()).filter(Boolean);
+  } else if (req.body.serviceId) {
+    svcIds = [req.body.serviceId];
+  } else {
+    return res.status(400).json({ message: 'Please select at least one service' });
+  }
+
+  const [svcs, cust] = await Promise.all([
+    Service.find({ _id: { $in: svcIds }, shopId: req.shopId, active: true }),
+    Customer.findOne({ shopId: req.shopId, userId: req.user._id })
+  ]);
+  if (!svcs.length || !cust) return res.status(404).json({ message: 'Selected services or customer record not found' });
+
+  const totalDuration = svcs.reduce((sum, s) => sum + (s.duration || 30), 0);
+  const totalPrice = svcs.reduce((sum, s) => sum + (s.price || 0), 0);
+  const serviceNames = svcs.map((s) => s.name).join(' + ');
+
+  const start = Number(req.body.startMin);
+  const end = start + totalDuration;
   const booked = await Appointment.find({ shopId: req.shopId, date: req.body.date, blocking: true });
-  if (hasConflict(booked, start, end)) return res.status(409).json({ message: 'Slot just got booked, pick another' });
-  const a = await Appointment.create({ shopId: req.shopId, customerId: cust._id, serviceId: svc._id, serviceName: svc.name, price: svc.price, date: req.body.date, startMin: start, endMin: end, status: 'pending', source: 'online' });
+  if (hasConflict(booked, start, end)) {
+    return res.status(409).json({ message: 'Time slot conflict. Total duration overlaps an existing booking. Please pick another slot.' });
+  }
+
+  const a = await Appointment.create({
+    shopId: req.shopId,
+    customerId: cust._id,
+    serviceId: svcs[0]._id,
+    serviceName: serviceNames,
+    services: svcs.map((s) => ({ serviceId: s._id, name: s.name, price: s.price, duration: s.duration })),
+    duration: totalDuration,
+    price: totalPrice,
+    date: req.body.date,
+    startMin: start,
+    endMin: end,
+    status: 'pending',
+    source: 'online'
+  });
+
   emitShop(req.shopId, 'booking:new', { id: a._id, customer: cust.name, date: a.date, startMin: a.startMin });
-  res.status(201).json({ data: a, message: 'Request sent. Waiting for shop confirmation.' });
+  res.status(201).json({ data: a, message: `Booking request sent for ${serviceNames} (${totalDuration}m, ₹${totalPrice}).` });
 }));
 r.get('/bookings', wrap(async (req, res) => {
   const c = await Customer.findOne({ shopId: req.shopId, userId: req.user._id });

@@ -267,13 +267,24 @@ export default function Customer() {
   // Booking Flow State
   const upcomingDays = getUpcomingDays();
   const [selectedDate, setSelectedDate] = useState(upcomingDays[0].dateStr);
-  const [selectedService, setSelectedService] = useState(null);
+  const [selectedServices, setSelectedServices] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [slots, setSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingMsg, setBookingMsg] = useState('');
   const [showConfirmBookingModal, setShowConfirmBookingModal] = useState(false);
+
+  // Multi-select computed total duration and price
+  const totalDuration = selectedServices.reduce((sum, s) => sum + (s.duration || 30), 0);
+  const totalPrice = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+
+  const toggleService = (s) => {
+    setSelectedServices((prev) => {
+      const exists = prev.some((x) => x._id === s._id);
+      return exists ? prev.filter((x) => x._id !== s._id) : [...prev, s];
+    });
+  };
 
   // Modals
   const [cancelBookingTarget, setCancelBookingTarget] = useState(null);
@@ -333,14 +344,15 @@ export default function Customer() {
     }
   }, []);
 
-  // Fetch slots whenever service, date, or shop changes
+  // Fetch slots whenever selected services, date, or shop changes
   useEffect(() => {
-    if (code && selectedService?._id && selectedDate) {
+    if (code && selectedServices.length > 0 && selectedDate) {
       setSlotsLoading(true);
       setSelectedSlot(null);
+      const svcIds = selectedServices.map((s) => s._id).join(',');
       api
         .get('/customer/public/slots', {
-          params: { code, serviceId: selectedService._id, date: selectedDate }
+          params: { code, serviceIds: svcIds, duration: totalDuration, date: selectedDate }
         })
         .then((r) => {
           setSlots(r.data || []);
@@ -353,15 +365,16 @@ export default function Customer() {
     } else {
       setSlots([]);
     }
-  }, [selectedService, selectedDate, code]);
+  }, [selectedServices, selectedDate, code, totalDuration]);
 
   const confirmAndBook = async () => {
-    if (!selectedService || !selectedSlot) return;
+    if (selectedServices.length === 0 || !selectedSlot) return;
     setBookingLoading(true);
     setBookingMsg('');
     try {
       const { data } = await api.post('/customer/bookings', {
-        serviceId: selectedService._id,
+        serviceIds: selectedServices.map((s) => s._id),
+        serviceId: selectedServices[0]._id,
         date: selectedDate,
         startMin: selectedSlot.startMin
       });
@@ -463,8 +476,8 @@ export default function Customer() {
     tier === 'Gold'
       ? 'from-amber-400 to-amber-600 text-amber-950'
       : tier === 'Silver'
-      ? 'from-stone-300 to-stone-400 text-stone-900'
-      : 'from-amber-700/80 to-amber-800 text-white';
+        ? 'from-stone-300 to-stone-400 text-stone-900'
+        : 'from-amber-700/80 to-amber-800 text-white';
 
   const activeBookingsCount = bk.filter((b) => ['pending', 'confirmed'].includes(b.status)).length;
 
@@ -619,7 +632,7 @@ export default function Customer() {
                     key={s._id}
                     className="card p-3.5 flex items-center justify-between gap-3 hover:border-amber-300 transition-all cursor-pointer"
                     onClick={() => {
-                      setSelectedService(s);
+                      setSelectedServices([s]);
                       setActiveTab('book');
                     }}
                   >
@@ -645,21 +658,77 @@ export default function Customer() {
         {/* ================= TAB 2: BOOKING FLOW ================= */}
         {activeTab === 'book' && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Step 1: Service Selection */}
+            {/* Step 1: Multi-Service Selection */}
             <div className="card p-4 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-stone-100">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center">
                     1
                   </div>
-                  <h3 className="font-bold text-stone-900 text-sm">Choose Service</h3>
+                  <div>
+                    <h3 className="font-bold text-stone-900 text-sm">Choose Services</h3>
+                    <p className="text-[11px] text-stone-500">Multi-select any combination of services</p>
+                  </div>
                 </div>
-                {selectedService && (
-                  <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
-                    {selectedService.name} (₹{selectedService.price})
+                {selectedServices.length > 0 && (
+                  <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                    {selectedServices.length} selected (₹{totalPrice})
                   </span>
                 )}
               </div>
+
+              {/* Service Selection Summary Pill Strip */}
+              {selectedServices.length > 0 && (
+                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-amber-900 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Selected Services ({selectedServices.length})</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedServices([])}
+                      className="text-[11px] text-amber-700 hover:text-amber-900 font-semibold underline"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedServices.map((s) => (
+                      <span
+                        key={s._id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-amber-200 text-stone-800 text-xs font-medium shadow-sm"
+                      >
+                        <span>{s.name}</span>
+                        <span className="text-[10px] text-amber-700 font-bold">₹{s.price} ({s.duration}m)</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleService(s);
+                          }}
+                          className="text-stone-400 hover:text-red-500 ml-0.5"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1.5 border-t border-amber-200/60 text-xs">
+                    <span className="text-amber-900 font-semibold flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-700" />
+                      <span>
+                        Approx Time: <strong className="text-stone-900">{totalDuration >= 60 ? `${Math.floor(totalDuration / 60)}h ${totalDuration % 60 ? `${totalDuration % 60}m` : ''}` : `${totalDuration} mins`}</strong>
+                      </span>
+                    </span>
+                    <span className="text-amber-950 font-extrabold text-sm">
+                      Total: ₹{totalPrice}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Service Search Bar */}
               <div className="relative">
@@ -675,33 +744,47 @@ export default function Customer() {
 
               <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1">
                 {filteredServices.map((s) => {
-                  const isSelected = selectedService?._id === s._id;
+                  const isSelected = selectedServices.some((x) => x._id === s._id);
                   return (
                     <button
                       key={s._id}
                       type="button"
-                      onClick={() => setSelectedService(s)}
-                      className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 ${
-                        isSelected
-                          ? 'border-amber-600 bg-amber-50/70 ring-2 ring-amber-600/30 shadow-xs'
+                      onClick={() => toggleService(s)}
+                      className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 ${isSelected
+                          ? 'border-amber-600 bg-amber-50/70 ring-2 ring-amber-600/30 shadow-sm'
                           : 'border-stone-200 bg-white hover:border-stone-300'
-                      }`}
+                        }`}
                     >
-                      <div>
-                        <span className="font-bold text-xs sm:text-sm text-stone-900 block leading-tight">
-                          {s.name}
-                        </span>
-                        <span className="text-[11px] text-stone-500 block mt-0.5">
-                          {s.duration} mins • {s.description || 'Professional grooming'}
-                        </span>
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
+                            isSelected
+                              ? 'bg-amber-600 border-amber-600 text-white'
+                              : 'border-stone-300 bg-stone-50'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                        <div>
+                          <span className="font-bold text-xs sm:text-sm text-stone-900 block leading-tight">
+                            {s.name}
+                          </span>
+                          <span className="text-[11px] text-stone-500 block mt-0.5">
+                            ⏱️ {s.duration} mins • {s.description || 'Professional grooming'}
+                          </span>
+                        </div>
                       </div>
                       <div className="text-right shrink-0">
                         <span className="font-extrabold text-amber-700 text-sm block">₹{s.price}</span>
-                        {isSelected ? (
-                          <span className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center ml-auto mt-1">
-                            <Check className="w-3 h-3" />
-                          </span>
-                        ) : null}
+                        <span
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
+                            isSelected
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-stone-100 text-stone-500'
+                          }`}
+                        >
+                          {isSelected ? 'Selected' : '+ Add'}
+                        </span>
                       </div>
                     </button>
                   );
@@ -729,11 +812,10 @@ export default function Customer() {
                       key={d.dateStr}
                       type="button"
                       onClick={() => setSelectedDate(d.dateStr)}
-                      className={`min-w-[62px] py-2.5 px-2 rounded-2xl border text-center transition-all shrink-0 ${
-                        isSelected
+                      className={`min-w-[62px] py-2.5 px-2 rounded-2xl border text-center transition-all shrink-0 ${isSelected
                           ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/25 font-bold scale-[1.02]'
                           : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
-                      }`}
+                        }`}
                     >
                       <span className="text-[10px] uppercase font-bold block opacity-80">{d.dayName}</span>
                       <span className="text-base font-extrabold block my-0.5">{d.dayNumber}</span>
@@ -754,25 +836,25 @@ export default function Customer() {
                   <h3 className="font-bold text-stone-900 text-sm">Choose Time Slot</h3>
                 </div>
                 {selectedSlot && (
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                    {fmt(selectedSlot.startMin)}
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                    {fmt(selectedSlot.startMin)} – {fmt(selectedSlot.startMin + totalDuration)} ({totalDuration}m)
                   </span>
                 )}
               </div>
 
-              {!selectedService ? (
+              {selectedServices.length === 0 ? (
                 <div className="p-6 text-center text-xs text-stone-400 space-y-1">
                   <Scissors className="w-6 h-6 mx-auto opacity-40" />
-                  <p>Please select a service above first</p>
+                  <p>Please select at least one service above to view available slots</p>
                 </div>
               ) : slotsLoading ? (
-                <div className="p-6 text-center text-xs text-stone-400">Loading available slots...</div>
+                <div className="p-6 text-center text-xs text-stone-400">Loading available slots for {totalDuration} min service...</div>
               ) : slots.length === 0 ? (
                 <div className="p-6 text-center text-xs text-stone-500 bg-stone-50 rounded-xl space-y-1">
                   <Clock className="w-6 h-6 text-stone-300 mx-auto" />
-                  <p className="font-semibold text-stone-700">No slots available for this date</p>
+                  <p className="font-semibold text-stone-700">No continuous {totalDuration}-minute slots available for this date</p>
                   <p className="text-[11px] text-stone-400">
-                    The salon may be closed or fully booked. Please select another date.
+                    The salon may be fully booked or closed. Try picking another date.
                   </p>
                 </div>
               ) : (
@@ -792,13 +874,12 @@ export default function Customer() {
                               key={s.startMin}
                               disabled={!s.available}
                               onClick={() => setSelectedSlot(s)}
-                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${
-                                !s.available
+                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${!s.available
                                   ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed'
                                   : isPicked
-                                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
-                                  : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
-                              }`}
+                                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
+                                    : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
+                                }`}
                             >
                               {fmt(s.startMin)}
                             </button>
@@ -823,13 +904,12 @@ export default function Customer() {
                               key={s.startMin}
                               disabled={!s.available}
                               onClick={() => setSelectedSlot(s)}
-                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${
-                                !s.available
+                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${!s.available
                                   ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed'
                                   : isPicked
-                                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
-                                  : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
-                              }`}
+                                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
+                                    : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
+                                }`}
                             >
                               {fmt(s.startMin)}
                             </button>
@@ -854,13 +934,12 @@ export default function Customer() {
                               key={s.startMin}
                               disabled={!s.available}
                               onClick={() => setSelectedSlot(s)}
-                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${
-                                !s.available
+                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${!s.available
                                   ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed'
                                   : isPicked
-                                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
-                                  : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
-                              }`}
+                                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
+                                    : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
+                                }`}
                             >
                               {fmt(s.startMin)}
                             </button>
@@ -874,16 +953,18 @@ export default function Customer() {
             </div>
 
             {/* Bottom Booking Summary Card / Proceed Button */}
-            {selectedService && selectedSlot && (
+            {selectedServices.length > 0 && selectedSlot && (
               <div className="card border-amber-300 bg-gradient-to-r from-amber-500/10 to-amber-500/5 p-4 space-y-3 animate-in slide-in-from-bottom-2 duration-150">
                 <div className="flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-bold text-stone-900 block text-sm">{selectedService.name}</span>
+                    <span className="font-bold text-stone-900 block text-sm">
+                      {selectedServices.map((s) => s.name).join(' + ')}
+                    </span>
                     <span className="text-stone-500">
-                      {selectedDate} at {fmt(selectedSlot.startMin)} ({selectedService.duration} mins)
+                      {selectedDate} at {fmt(selectedSlot.startMin)} – {fmt(selectedSlot.startMin + totalDuration)} ({totalDuration} mins approx)
                     </span>
                   </div>
-                  <span className="text-lg font-extrabold text-amber-800">₹{selectedService.price}</span>
+                  <span className="text-lg font-extrabold text-amber-800">₹{totalPrice}</span>
                 </div>
 
                 <button
@@ -926,11 +1007,10 @@ export default function Customer() {
                   <button
                     key={tab.id}
                     onClick={() => setApptFilter(tab.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                      apptFilter === tab.id
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${apptFilter === tab.id
                         ? 'bg-stone-900 text-white shadow-xs'
                         : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
-                    }`}
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -1014,7 +1094,7 @@ export default function Customer() {
         {activeTab === 'profile' && (
           <div className="space-y-4 animate-in fade-in duration-200">
             {/* VIP Loyalty Rewards Card */}
-            <div className={`rounded-3xl p-5 shadow-xl bg-gradient-to-r ${tierColor} space-y-3 relative overflow-hidden`}>
+            {/* <div className={`rounded-3xl p-5 shadow-xl bg-gradient-to-r ${tierColor} space-y-3 relative overflow-hidden`}>
               <div className="flex items-start justify-between relative z-10">
                 <div className="space-y-0.5">
                   <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-black/20 inline-block">
@@ -1026,10 +1106,10 @@ export default function Customer() {
                 <div className="p-3 rounded-2xl bg-black/15 shrink-0">
                   <Award className="w-8 h-8" />
                 </div>
-              </div>
+              </div> */}
 
-              {/* Tier Progress Bar */}
-              <div className="space-y-1 relative z-10 pt-1">
+            {/* Tier Progress Bar */}
+            {/* {/* <div className="space-y-1 relative z-10 pt-1">
                 <div className="flex justify-between text-[11px] font-semibold opacity-90">
                   <span>{tier} Tier</span>
                   <span>{tier === 'Gold' ? 'Max VIP Status' : `${300 - pts} pts to ${tier === 'Bronze' ? 'Silver' : 'Gold'}`}</span>
@@ -1040,8 +1120,8 @@ export default function Customer() {
                     style={{ width: `${Math.min(100, Math.max(10, (pts / 300) * 100))}%` }}
                   />
                 </div>
-              </div>
-            </div>
+              </div> 
+            </div> */}
 
             {/* Quick Profile Summary Card */}
             <div className="card p-4 flex items-center gap-3.5">
@@ -1215,9 +1295,8 @@ export default function Customer() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl relative transition-all ${
-                isActive ? 'text-amber-600 font-bold scale-[1.05]' : 'hover:text-stone-900'
-              }`}
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl relative transition-all ${isActive ? 'text-amber-600 font-bold scale-[1.05]' : 'hover:text-stone-900'
+                }`}
             >
               <div className="relative">
                 <Icon className={`w-5 h-5 mb-0.5 ${isActive ? 'stroke-[2.5]' : ''}`} />
@@ -1247,17 +1326,25 @@ export default function Customer() {
         onConfirm={confirmAndBook}
         onClose={() => setShowConfirmBookingModal(false)}
       >
-        {selectedService && selectedSlot && (
+        {selectedServices.length > 0 && selectedSlot && (
           <div className="space-y-3 pt-1 text-xs">
             <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200/80 space-y-2">
               <div className="flex justify-between items-center pb-1.5 border-b border-stone-200">
                 <span className="text-stone-500">Salon</span>
                 <span className="font-bold text-stone-900">{shopInfo?.shop?.name || 'Salon'}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-stone-500">Service</span>
-                <span className="font-bold text-stone-900">{selectedService.name}</span>
+
+              {/* Multi-service breakdown */}
+              <div className="space-y-1 py-1 border-b border-stone-200">
+                <span className="text-stone-500 font-semibold block text-[11px]">Selected Services ({selectedServices.length})</span>
+                {selectedServices.map((s) => (
+                  <div key={s._id} className="flex justify-between items-center pl-1 text-[11px]">
+                    <span className="text-stone-800 font-medium">• {s.name} <span className="text-stone-400">({s.duration}m)</span></span>
+                    <span className="text-stone-900 font-bold">₹{s.price}</span>
+                  </div>
+                ))}
               </div>
+
               <div className="flex justify-between items-center">
                 <span className="text-stone-500">Date & Time</span>
                 <span className="font-bold text-amber-700">
@@ -1265,12 +1352,14 @@ export default function Customer() {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-stone-500">Duration</span>
-                <span className="text-stone-700 font-medium">{selectedService.duration} minutes</span>
+                <span className="text-stone-500">Approx. Duration</span>
+                <span className="text-stone-700 font-bold">
+                  {totalDuration} mins ({fmt(selectedSlot.startMin)} – {fmt(selectedSlot.startMin + totalDuration)})
+                </span>
               </div>
               <div className="flex justify-between items-center pt-1.5 border-t border-stone-200 text-sm">
-                <span className="font-bold text-stone-900">Total Due at Salon</span>
-                <span className="font-extrabold text-amber-800 text-base">₹{selectedService.price}</span>
+                <span className="font-bold text-stone-900">Total Amount</span>
+                <span className="font-extrabold text-amber-800 text-base">₹{totalPrice}</span>
               </div>
             </div>
 
@@ -1288,9 +1377,8 @@ export default function Customer() {
         title="Cancel Appointment"
         message={
           cancelBookingTarget
-            ? `Are you sure you want to cancel your ${cancelBookingTarget.serviceName} booking on ${
-                cancelBookingTarget.date
-              } at ${fmt(cancelBookingTarget.startMin)}?`
+            ? `Are you sure you want to cancel your ${cancelBookingTarget.serviceName} booking on ${cancelBookingTarget.date
+            } at ${fmt(cancelBookingTarget.startMin)}?`
             : ''
         }
         confirmText="Yes, Cancel Booking"
