@@ -321,8 +321,7 @@ export default function Customer() {
     mobile: '',
     dob: '',
     gender: 'unspecified',
-    notes: '',
-    loyaltyPoints: 0
+    notes: ''
   });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
@@ -393,8 +392,7 @@ export default function Customer() {
         mobile: u.mobile || c.mobile || '',
         dob: c.dob ? c.dob.slice(0, 10) : '',
         gender: c.gender || 'unspecified',
-        notes: c.notes || '',
-        loyaltyPoints: c.loyaltyPoints || 0
+        notes: c.notes || ''
       });
       setUser((prev) => ({ ...prev, name: u.name || c.name }));
     });
@@ -788,16 +786,6 @@ export default function Customer() {
   const morningSlots = slots.filter((s) => s.startMin < 720); // before 12 PM
   const afternoonSlots = slots.filter((s) => s.startMin >= 720 && s.startMin < 1020); // 12 PM - 5 PM
   const eveningSlots = slots.filter((s) => s.startMin >= 1020); // 5 PM onwards
-
-  // Loyalty Tier Calculation
-  const pts = profileData.loyaltyPoints;
-  const tier = pts >= 300 ? 'Gold' : pts >= 100 ? 'Silver' : 'Bronze';
-  const tierColor =
-    tier === 'Gold'
-      ? 'from-amber-400 to-amber-600 text-amber-950'
-      : tier === 'Silver'
-        ? 'from-stone-300 to-stone-400 text-stone-900'
-        : 'from-amber-700/80 to-amber-800 text-white';
 
   const activeBookingsCount = bk.filter((b) => ['pending', 'confirmed'].includes(b.status)).length;
 

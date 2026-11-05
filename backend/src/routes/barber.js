@@ -450,7 +450,6 @@ r.post('/invoices', wrap(async (req, res) => {
     : [{ name: a.serviceName, price: a.price }];
   const inv = await Invoice.create({ shopId: req.shopId, appointmentId: a._id, customerId: a.customerId, items, discount, taxPct, total, method: req.body.method || 'cash' });
   a.status = 'completed'; await a.save();
-  await Customer.updateOne({ _id: a.customerId, shopId: req.shopId }, { $inc: { loyaltyPoints: Math.floor(total / 100) } });
   res.status(201).json({ data: inv, message: 'Bill generated: ₹' + total });
 }));
 r.get('/invoices', wrap(async (req, res) => res.json(await Invoice.find({ shopId: req.shopId }).populate('customerId', 'name').sort('-createdAt').limit(200))));
@@ -520,7 +519,7 @@ r.get('/customers-paginated', wrap(async (req, res) => {
 
 r.get('/customers/:id/ledger', wrap(async (req, res) => {
   const customer = await Customer.findOne({ _id: req.params.id, shopId: req.shopId, deleted: false })
-    .select('name mobile email notes loyaltyPoints createdAt');
+    .select('name mobile email notes createdAt');
   if (!customer) return res.status(404).json({ message: 'Customer not found' });
 
   const [appointments, invoices] = await Promise.all([

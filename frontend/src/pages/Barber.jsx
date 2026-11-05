@@ -2549,8 +2549,8 @@ function ClientsPage() {
                     <span className="font-medium text-stone-800 truncate block">{c.email || '–'}</span>
                   </div>
                   <div>
-                    <span className="text-stone-400 block">Loyalty Points</span>
-                    <span className="font-medium text-stone-800">{c.loyaltyPoints || 0}</span>
+                    <span className="text-stone-400 block">Registered</span>
+                    <span className="font-medium text-stone-800">{fmtDate(c.createdAt)}</span>
                   </div>
                   <div className="col-span-2">
                     <span className="text-stone-400 block">Notes</span>
@@ -2570,7 +2570,6 @@ function ClientsPage() {
                     <th className="py-3 px-4">Client</th>
                     <th className="py-3 px-4">Mobile</th>
                     <th className="py-3 px-4">Email</th>
-                    <th className="py-3 px-4">Loyalty Pts</th>
                     <th className="py-3 px-4">Notes</th>
                     <th className="py-3 px-4">Registered</th>
                     <th className="py-3 px-4 text-right">Actions</th>
@@ -2589,11 +2588,6 @@ function ClientsPage() {
                       </td>
                       <td className="py-3 px-4 text-stone-600">{c.mobile}</td>
                       <td className="py-3 px-4 text-stone-600">{c.email || '–'}</td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-800 rounded-full text-xs font-bold">
-                          <Sparkles className="w-3 h-3" /> {c.loyaltyPoints || 0}
-                        </span>
-                      </td>
                       <td className="py-3 px-4 text-stone-500 text-xs max-w-[160px] truncate">{c.notes || '–'}</td>
                       <td className="py-3 px-4 text-stone-500 text-xs">{fmtDate(c.createdAt)}</td>
                       <td className="py-3 px-4 text-right">
@@ -2813,7 +2807,7 @@ function ClientsPage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-3 text-xs text-stone-500">
-                    <span>Loyalty Points: <b className="text-amber-700">{ledgerData.customer?.loyaltyPoints || 0}</b></span>
+                    <span>Client Since: <b className="text-stone-700">{fmtDate(ledgerData.customer?.createdAt)}</b></span>
                     <span>Last Visit: <b className="text-stone-700">{fmtDate(ledgerData.stats?.lastVisitDate)}</b></span>
                     {(ledgerData.stats?.cancelledCount || 0) > 0 && (
                       <span className="text-red-600">Cancelled: <b>{ledgerData.stats.cancelledCount}</b></span>
