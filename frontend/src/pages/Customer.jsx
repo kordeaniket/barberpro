@@ -40,7 +40,9 @@ import {
   Bell,
   BellRing,
   Trash2,
-  CheckCheck
+  CheckCheck,
+  ChevronLeft,
+  XCircle
 } from 'lucide-react';
 
 function playNotificationChime() {
@@ -556,14 +558,35 @@ export default function Customer() {
       (s.description || '').toLowerCase().includes(searchSvc.toLowerCase());
   });
 
-  // Appointment list filtered
-  const filteredAppointments = bk.filter((b) => {
-    if (apptFilter === 'all') return true;
-    if (apptFilter === 'active') return ['pending', 'confirmed', 'in_progress'].includes(b.status);
-    if (apptFilter === 'completed') return b.status === 'completed';
-    if (apptFilter === 'cancelled') return ['cancelled', 'rejected', 'no_show'].includes(b.status);
-    return true;
-  });
+  // Appointments Pagination
+  const [apptPage, setApptPage] = useState(1);
+  const apptPerPage = 5;
+
+  // Reset pagination on filter change
+  useEffect(() => {
+    setApptPage(1);
+  }, [apptFilter]);
+
+  // Appointment list sorted (latest entry on top) & filtered
+  const filteredAppointments = [...bk]
+    .sort((a, b) => {
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+      const dateCmp = (b.date || '').localeCompare(a.date || '');
+      if (dateCmp !== 0) return -dateCmp;
+      return (b.startMin || 0) - (a.startMin || 0);
+    })
+    .filter((b) => {
+      if (apptFilter === 'all') return true;
+      if (apptFilter === 'active') return ['pending', 'confirmed', 'in_progress'].includes(b.status);
+      if (apptFilter === 'completed') return b.status === 'completed';
+      if (apptFilter === 'cancelled') return ['cancelled', 'rejected', 'no_show'].includes(b.status);
+      return true;
+    });
+
+  const totalApptPages = Math.ceil(filteredAppointments.length / apptPerPage) || 1;
+  const paginatedAppointments = filteredAppointments.slice((apptPage - 1) * apptPerPage, apptPage * apptPerPage);
 
   // Disable past slots if selected date is today
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -1379,70 +1402,108 @@ export default function Customer() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {filteredAppointments.map((b) => (
-                  <div
-                    key={b._id}
-                    className="bg-[#181920] border border-stone-800 hover:border-stone-700 rounded-2xl p-3.5 sm:p-4 transition-all shadow-xs"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      {/* Service Details */}
-                      <div className="flex items-center justify-between sm:justify-start sm:gap-5 min-w-0 flex-1">
-                        <div className="min-w-0">
-                          <span className="font-bold text-white text-sm sm:text-base block truncate">
-                            {b.serviceName}
-                          </span>
-
-                          <span className="text-[11px] text-stone-400 flex items-center gap-1 mt-0.5">
-                            <Store className="w-3 h-3 text-stone-500 shrink-0" />
-                            <span className="truncate">
+              <div className="bg-[#181920] border border-stone-800 rounded-2xl overflow-hidden shadow-xs">
+                {/* Responsive Table Structure */}
+                <div className="overflow-x-auto [scrollbar-width:thin]">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-[#13141a] border-b border-stone-800 text-stone-400 font-semibold uppercase text-[10px] tracking-wider">
+                        <th className="py-2.5 px-3">Service</th>
+                        <th className="py-2.5 px-3">Date & Time</th>
+                        <th className="py-2.5 px-3">Price</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3 text-center">Cancel</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-800/70 text-stone-200">
+                      {paginatedAppointments.map((b) => (
+                        <tr key={b._id} className="hover:bg-[#1f202a] transition-colors">
+                          {/* Service Details */}
+                          <td className="py-2.5 px-3 min-w-[120px]">
+                            <span className="font-bold text-white block truncate leading-tight">
+                              {b.serviceName}
+                            </span>
+                            <span className="text-[10px] text-stone-500 block truncate mt-0.5">
                               {shopInfo?.shop?.name || 'Salon'}
                             </span>
-                          </span>
-                        </div>
+                          </td>
 
-                        {/* Price - Mobile */}
-                        <span className="font-extrabold text-amber-400 text-sm sm:hidden shrink-0">
-                          ₹{b.price}
-                        </span>
-                      </div>
+                          {/* Date & Time */}
+                          <td className="py-2.5 px-3 whitespace-nowrap min-w-[100px]">
+                            <span className="text-stone-300 font-medium block">
+                              {b.date}
+                            </span>
+                            <span className="text-[10px] text-amber-400 font-mono block">
+                              {fmt(b.startMin)}
+                            </span>
+                          </td>
 
-                      {/* Booking Info */}
-                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 flex-wrap">
-                        {/* Date */}
-                        <div className="flex flex-col items-start gap-1 text-xs text-stone-300 font-medium">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-stone-500" />
-                            {b.date}
-                          </span>
+                          {/* Price */}
+                          <td className="py-2.5 px-3 whitespace-nowrap font-extrabold text-amber-400">
+                            ₹{b.price}
+                          </td>
 
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-stone-500" />
-                            {fmt(b.startMin)}
-                          </span>
-                        </div>
+                          {/* Status */}
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <StatusBadge status={b.status} />
+                          </td>
 
-                        {/* Price - Desktop */}
-                        <span className="hidden sm:block font-extrabold text-amber-400 text-sm min-w-[65px] text-right">
-                          ₹{b.price}
-                        </span>
+                          {/* Cancel Action Icon */}
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            {['pending', 'confirmed'].includes(b.status) ? (
+                              <button
+                                type="button"
+                                onClick={() => setCancelBookingTarget(b)}
+                                title="Cancel Appointment"
+                                aria-label="Cancel appointment"
+                                className="p-1.5 rounded-lg text-red-400 hover:text-red-200 hover:bg-red-500/20 border border-red-500/30 transition-all inline-flex items-center justify-center active:scale-95"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <span className="text-stone-600 text-xs">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                        {/* Status */}
-                        <StatusBadge status={b.status} />
+                {/* Table Pagination Footer */}
+                {filteredAppointments.length > 0 && (
+                  <div className="bg-[#14151b] border-t border-stone-800 px-3 py-2 flex items-center justify-between text-[11px] text-stone-400">
+                    <span>
+                      Showing <strong className="text-white">{(apptPage - 1) * apptPerPage + 1}</strong>–<strong className="text-white">{Math.min(apptPage * apptPerPage, filteredAppointments.length)}</strong> of <strong className="text-white">{filteredAppointments.length}</strong>
+                    </span>
 
-                        {/* Actions */}
-                        {['pending', 'confirmed'].includes(b.status) && (
-                          <button
-                            className="btn-danger text-xs py-1.5 px-3 whitespace-nowrap"
-                            onClick={() => setCancelBookingTarget(b)}
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={apptPage === 1}
+                        onClick={() => setApptPage((p) => Math.max(1, p - 1))}
+                        className="p-1 rounded-lg border border-stone-800 bg-[#191a22] hover:bg-stone-800 disabled:opacity-40 disabled:pointer-events-none text-stone-300 transition-colors"
+                        title="Previous Page"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+
+                      <span className="px-2 py-0.5 rounded bg-[#1a1b24] border border-stone-800 font-bold text-white text-[10px]">
+                        {apptPage} / {totalApptPages}
+                      </span>
+
+                      <button
+                        type="button"
+                        disabled={apptPage >= totalApptPages}
+                        onClick={() => setApptPage((p) => Math.min(totalApptPages, p + 1))}
+                        className="p-1 rounded-lg border border-stone-800 bg-[#191a22] hover:bg-stone-800 disabled:opacity-40 disabled:pointer-events-none text-stone-300 transition-colors"
+                        title="Next Page"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
