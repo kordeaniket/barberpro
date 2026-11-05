@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import api, { saveSession, clearSession } from '../api';
@@ -42,7 +42,8 @@ import {
   Trash2,
   CheckCheck,
   ChevronLeft,
-  XCircle
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 
 function playNotificationChime() {
@@ -408,33 +409,157 @@ export default function Customer() {
     });
   };
 
+  const knownStatusMap = useRef(new Map());
+  const knownCustomerNotifIds = useRef(new Set());
+  const isCustSyncInit = useRef(false);
+
+  // Real-time synchronization for Customer appointments and live notifications
+  const syncCustomerData = async (isInitial = false) => {
+    try {
+      // 1. Sync Bookings list (for real-time appointment status changes & countdown updates)
+      const bkRes = await api.get('/customer/bookings', { skipGlobalLoader: true });
+      if (Array.isArray(bkRes.data)) {
+        const currentList = bkRes.data;
+
+        if (isInitial || !isCustSyncInit.current) {
+          currentList.forEach((b) => knownStatusMap.current.set(b._id, b.status));
+          setBk(currentList);
+        } else {
+          let hasChange = false;
+          let changedAppt = null;
+
+          for (const b of currentList) {
+            const prev = knownStatusMap.current.get(b._id);
+            if (prev && prev !== b.status) {
+              hasChange = true;
+              changedAppt = b;
+              knownStatusMap.current.set(b._id, b.status);
+              break;
+            } else if (!prev) {
+              knownStatusMap.current.set(b._id, b.status);
+              hasChange = true;
+            }
+          }
+
+          if (hasChange) {
+            setBk(currentList);
+            if (changedAppt) {
+              playNotificationChime();
+              let notifTitle = 'Booking Status Updated';
+              if (changedAppt.status === 'confirmed') notifTitle = '🎉 Booking Confirmed!';
+              else if (changedAppt.status === 'in_progress') notifTitle = '✂️ Service In Progress';
+              else if (changedAppt.status === 'completed') notifTitle = '✅ Service Completed!';
+              else if (['cancelled', 'rejected', 'no_show'].includes(changedAppt.status)) notifTitle = '⚠️ Appointment Cancelled';
+
+              setToastNotif({
+                title: notifTitle,
+                message: `Your booking for ${changedAppt.serviceName} is now ${changedAppt.status.replace('_', ' ')}!`,
+                type: changedAppt.status,
+                serviceName: changedAppt.serviceName,
+                date: changedAppt.date,
+                time: fmt(changedAppt.startMin),
+                price: changedAppt.price
+              });
+              setTimeout(() => setToastNotif(null), 6500);
+            }
+          }
+        }
+      }
+
+      // 2. Sync Notifications list
+      const notifRes = await api.get('/customer/notifications', { skipGlobalLoader: true });
+      if (Array.isArray(notifRes.data)) {
+        const incoming = notifRes.data;
+
+        if (isInitial || !isCustSyncInit.current) {
+          incoming.forEach((n) => knownCustomerNotifIds.current.add(n.id));
+          setCustomerNotifs((prev) => {
+            const readMap = new Map(prev.map((n) => [n.id, n.read]));
+            const merged = incoming.map((n) => ({
+              ...n,
+              read: readMap.has(n.id) ? readMap.get(n.id) : false
+            }));
+            localStorage.setItem('customer_notifications', JSON.stringify(merged));
+            return merged;
+          });
+          isCustSyncInit.current = true;
+        } else {
+          const newNotifs = incoming.filter((n) => !knownCustomerNotifIds.current.has(n.id));
+          if (newNotifs.length > 0) {
+            newNotifs.forEach((n) => knownCustomerNotifIds.current.add(n.id));
+            playNotificationChime();
+
+            const latest = newNotifs[0];
+            setToastNotif(latest);
+            setTimeout(() => setToastNotif(null), 6500);
+
+            setCustomerNotifs((prev) => {
+              const readMap = new Map(prev.map((n) => [n.id, n.read]));
+              const merged = incoming.map((n) => ({
+                ...n,
+                read: readMap.has(n.id) ? readMap.get(n.id) : false
+              }));
+              localStorage.setItem('customer_notifications', JSON.stringify(merged));
+              return merged;
+            });
+          }
+        }
+      }
+    } catch {
+      // Background silent catch
+    }
+  };
+
   useEffect(() => {
-    loadBookings();
     loadProfile();
-    loadNotifications();
+    syncCustomerData(true);
 
+    // Active real-time background sync interval (every 3.5 seconds)
+    const pollInterval = setInterval(() => {
+      syncCustomerData(false);
+    }, 3500);
+
+    // Immediate sync when tab or window is refocused
+    const handleFocus = () => {
+      if (!document.hidden) {
+        syncCustomerData(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('focus', handleFocus);
+
+    // Also support Socket.IO if connected
     const token = localStorage.getItem('token');
-    if (!token) return;
+    let socket;
+    if (token) {
+      try {
+        const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || undefined;
+        socket = socketUrl ? io(socketUrl, { auth: { token } }) : io({ auth: { token } });
 
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || undefined;
-    const socket = socketUrl ? io(socketUrl, { auth: { token } }) : io({ auth: { token } });
+        socket.on('booking:updated', (data) => {
+          playNotificationChime();
+          syncCustomerData(false);
+          setToastNotif(data);
+          setTimeout(() => setToastNotif(null), 6000);
+        });
 
-    socket.on('booking:updated', (data) => {
-      playNotificationChime();
-      loadBookings();
-      loadNotifications();
-      setToastNotif(data);
-      setTimeout(() => setToastNotif(null), 6000);
-    });
+        socket.on('appointment:reminder', (data) => {
+          playNotificationChime();
+          syncCustomerData(false);
+          setToastNotif(data);
+          setTimeout(() => setToastNotif(null), 6000);
+        });
+      } catch {
+        // Socket.IO optional
+      }
+    }
 
-    socket.on('appointment:reminder', (data) => {
-      playNotificationChime();
-      loadNotifications();
-      setToastNotif(data);
-      setTimeout(() => setToastNotif(null), 6000);
-    });
-
-    return () => socket.close();
+    return () => {
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('focus', handleFocus);
+      if (socket) socket.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -1724,12 +1849,22 @@ export default function Customer() {
                   </span>
                 )}
               </div>
-              <button
-                onClick={() => setShowNotifDrawer(false)}
-                className="p-1 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => syncCustomerData(false)}
+                  className="p-1 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
+                  title="Refresh Notifications"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setShowNotifDrawer(false)}
+                  className="p-1 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Actions: Mark read / Clear */}

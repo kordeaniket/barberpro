@@ -21,7 +21,8 @@ import {
   Trash2,
   Clock,
   Sparkles,
-  CalendarCheck
+  CalendarCheck,
+  RefreshCw
 } from 'lucide-react';
 
 export const fmt = (m) => {
@@ -81,7 +82,24 @@ function NotificationMenu({ isMobile = false }) {
   const notifs = useSelector((s) => s.notifications?.items) || [];
   const unreadCount = useSelector((s) => s.notifications?.unreadCount) || 0;
   const [open, setOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const menuRef = useRef(null);
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const res = await api.get('/barber/notifications', { skipGlobalLoader: true });
+      if (Array.isArray(res.data)) {
+        d(notifications.actions.setNotifications(res.data));
+      }
+      d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
+      d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
+      d(ui.actions.triggerRefresh());
+    } catch {
+    } finally {
+      setTimeout(() => setRefreshing(false), 400);
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -131,6 +149,16 @@ function NotificationMenu({ isMobile = false }) {
             </div>
 
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="p-1 rounded-lg hover:bg-stone-200 text-stone-600 text-xs flex items-center gap-1 font-medium transition-colors"
+                title="Refresh notifications & table"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-amber-600' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
               {unreadCount > 0 && (
                 <button
                   type="button"
@@ -432,54 +460,129 @@ export default function Shell({ title, links, children, actions, subtitle }) {
     : roleLabel;
   const storeLogo = isBarber ? activeShop?.logoUrl : null;
 
-  // Real-time Socket.IO connection for Barber booking notifications
+  const knownNotifIds = useRef(new Set());
+  const isSyncInitialized = useRef(false);
+
+  // Real-time Notification Engine for Barber Store (Works 100% on Vercel production + Socket.io)
   useEffect(() => {
     if (!isBarber) return;
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    // Load recent notifications from backend
-    api
-      .get('/barber/notifications')
-      .then((res) => {
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          d(notifications.actions.setNotifications(res.data));
+    const syncNotifications = async (isInitial = false) => {
+      try {
+        const res = await api.get('/barber/notifications', { skipGlobalLoader: true });
+        if (Array.isArray(res.data)) {
+          const incoming = res.data;
+
+          if (isInitial || !isSyncInitialized.current) {
+            // Register existing notification IDs on first load
+            incoming.forEach((n) => knownNotifIds.current.add(n.id));
+            d(notifications.actions.setNotifications(incoming));
+            isSyncInitialized.current = true;
+          } else {
+            // Check for brand new notifications
+            const newItems = incoming.filter((n) => !knownNotifIds.current.has(n.id));
+            if (newItems.length > 0) {
+              newItems.forEach((n) => knownNotifIds.current.add(n.id));
+              playNotificationChime();
+
+              const latest = newItems[0];
+              const toastText =
+                latest.type === 'cancellation'
+                  ? `⚠️ Booking Cancelled: ${latest.customer} (${latest.serviceName})`
+                  : latest.type === 'completed'
+                    ? `✅ Service Completed: ${latest.customer} (${latest.serviceName})`
+                    : `🔔 New Online Booking: ${latest.customer} booked ${latest.serviceName}!`;
+
+              d(
+                ui.actions.setMsg({
+                  type: latest.type === 'cancellation' ? 'error' : 'ok',
+                  text: toastText
+                })
+              );
+
+              d(notifications.actions.setNotifications(incoming));
+
+              // Real-time table and dashboard refresh without page reload
+              d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
+              d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
+              d(ui.actions.triggerRefresh());
+            } else {
+              d(notifications.actions.setNotifications(incoming));
+            }
+          }
         }
-      })
-      .catch(() => {});
+      } catch {
+        // Silent background sync
+      }
+    };
 
+    // Initial load
+    syncNotifications(true);
+
+    // Active real-time background sync interval (every 3.5 seconds on production)
+    const pollTimer = setInterval(() => {
+      syncNotifications(false);
+    }, 3500);
+
+    // Instant sync when user refocuses browser window or tab
+    const handleFocus = () => {
+      if (!document.hidden) {
+        syncNotifications(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('focus', handleFocus);
+
+    // Also support Socket.IO if a persistent connection is available
     const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || undefined;
-    const socket = socketUrl ? io(socketUrl, { auth: { token } }) : io({ auth: { token } });
+    let socket;
+    try {
+      socket = socketUrl ? io(socketUrl, { auth: { token } }) : io({ auth: { token } });
 
-    socket.on('booking:new', (data) => {
-      d(notifications.actions.addNotification(data));
-      playNotificationChime();
-      d(
-        ui.actions.setMsg({
-          type: 'ok',
-          text: `🔔 New Booking: ${data.customer} booked ${data.serviceName}!`
-        })
-      );
-      // Automatically refresh live dashboard & appointments data
-      d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
-      d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
-      d(ui.actions.triggerRefresh());
-    });
+      socket.on('booking:new', (data) => {
+        if (!knownNotifIds.current.has(data.id)) {
+          knownNotifIds.current.add(data.id);
+          d(notifications.actions.addNotification(data));
+          playNotificationChime();
+          d(
+            ui.actions.setMsg({
+              type: 'ok',
+              text: `🔔 New Booking: ${data.customer} booked ${data.serviceName}!`
+            })
+          );
+          d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
+          d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
+          d(ui.actions.triggerRefresh());
+        }
+      });
 
-    socket.on('booking:cancelled', (data) => {
-      d(notifications.actions.addNotification(data));
-      d(
-        ui.actions.setMsg({
-          type: 'error',
-          text: `⚠️ Booking Cancelled: ${data.customer} (${data.serviceName})`
-        })
-      );
-      d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
-      d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
-      d(ui.actions.triggerRefresh());
-    });
+      socket.on('booking:cancelled', (data) => {
+        if (!knownNotifIds.current.has(data.id)) {
+          knownNotifIds.current.add(data.id);
+          d(notifications.actions.addNotification(data));
+          d(
+            ui.actions.setMsg({
+              type: 'error',
+              text: `⚠️ Booking Cancelled: ${data.customer} (${data.serviceName})`
+            })
+          );
+          d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
+          d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
+          d(ui.actions.triggerRefresh());
+        }
+      });
+    } catch {
+      // Socket.IO optional
+    }
 
-    return () => socket.close();
+    return () => {
+      clearInterval(pollTimer);
+      document.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('focus', handleFocus);
+      if (socket) socket.close();
+    };
   }, [isBarber, d]);
 
   return (
