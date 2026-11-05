@@ -46,11 +46,223 @@ crud('/customers', Customer, ['name', 'mobile', 'email', 'dob', 'gender', 'notes
 crud('/services', Service, ['name', 'description', 'price', 'duration', 'active']);
 r.get('/shop', wrap(async (req, res) => res.json({ shop: req.shop, customerLink: `${process.env.CLIENT_URL || 'http://localhost:5173'}/s/${req.shop.shopCode}` })));
 r.get('/dashboard', wrap(async (req, res) => {
-  const s = req.shopId, d = today(), m = d.slice(0, 7);
-  const cnt = (st) => Appointment.countDocuments({ shopId: s, date: d, ...(st ? { status: st } : {}) });
-  const sum = async (from) => (await Invoice.aggregate([{ $match: { shopId: s, createdAt: { $gte: from } } }, { $group: { _id: null, t: { $sum: '$total' } } }]))[0]?.t || 0;
-  const [total, completed, pending, cancelled, customers, todaySales, monthSales] = await Promise.all([cnt(), cnt('completed'), Appointment.countDocuments({ shopId: s, status: 'pending' }), cnt('cancelled'), Customer.countDocuments({ shopId: s, deleted: false }), sum(new Date(d)), sum(new Date(m + '-01'))]);
-  res.json({ total, completed, pending, cancelled, customers, todaySales, monthSales });
+  const shopId = req.shopId;
+  const d = today(); // "YYYY-MM-DD"
+  const now = new Date();
+  const period = req.query.period || 'daily';
+
+  // ── Date range for the selected period ──────────────────────────
+  let periodStart, periodEnd;
+  if (period === 'weekly') {
+    periodStart = new Date(now); periodStart.setDate(now.getDate() - 6); periodStart.setHours(0, 0, 0, 0);
+    periodEnd = new Date(now); periodEnd.setHours(23, 59, 59, 999);
+  } else if (period === 'monthly') {
+    periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    periodEnd = new Date(now); periodEnd.setHours(23, 59, 59, 999);
+  } else if (period === 'yearly') {
+    periodStart = new Date(now.getFullYear(), 0, 1);
+    periodEnd = new Date(now); periodEnd.setHours(23, 59, 59, 999);
+  } else {
+    // daily
+    periodStart = new Date(d); periodStart.setHours(0, 0, 0, 0);
+    periodEnd = new Date(d); periodEnd.setHours(23, 59, 59, 999);
+  }
+
+  // Helper: generate YYYY-MM-DD strings in a date range (inclusive)
+  const datesToStrings = (from, to) => {
+    const result = [];
+    const cur = new Date(from);
+    while (cur <= to) {
+      result.push(cur.toISOString().slice(0, 10));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return result;
+  };
+  const periodDateStrings = datesToStrings(periodStart, periodEnd);
+
+  // ── Appointment filter (string date field) ─────────────────────
+  const apptPeriodFilter = { shopId, date: { $in: periodDateStrings } };
+  const apptTodayFilter = { shopId, date: d };
+
+  // ── Invoice / Customer filter (Date createdAt) ─────────────────
+  const invoicePeriodFilter = { shopId, createdAt: { $gte: periodStart, $lte: periodEnd } };
+  const invoiceTodayFilter = { shopId, createdAt: { $gte: new Date(d), $lte: new Date(d + 'T23:59:59.999Z') } };
+  const customerPeriodFilter = { shopId, deleted: false, createdAt: { $gte: periodStart, $lte: periodEnd } };
+
+  // ── 1. Summary cards ──────────────────────────────────────────
+  const [
+    totalAppointments,
+    completedAppointments,
+    pendingAppointments,
+    cancelledAppointments,
+    revenueAgg,
+    totalCustomers,
+    newCustomers,
+    totalServices,
+    onlineBookings,
+    walkInBookings,
+    todayTotal,
+    todayCompleted,
+    todayPending,
+    todayCancelled,
+    todayRevenueAgg
+  ] = await Promise.all([
+    Appointment.countDocuments(apptPeriodFilter),
+    Appointment.countDocuments({ ...apptPeriodFilter, status: 'completed' }),
+    Appointment.countDocuments({ shopId, status: 'pending' }),
+    Appointment.countDocuments({ ...apptPeriodFilter, status: { $in: ['cancelled', 'rejected'] } }),
+    Invoice.aggregate([{ $match: invoicePeriodFilter }, { $group: { _id: null, t: { $sum: '$total' }, c: { $sum: 1 } } }]),
+    Customer.countDocuments({ shopId, deleted: false }),
+    Customer.countDocuments(customerPeriodFilter),
+    Service.countDocuments({ shopId, active: { $ne: false } }),
+    Appointment.countDocuments({ ...apptPeriodFilter, source: 'online' }),
+    Appointment.countDocuments({ ...apptPeriodFilter, source: 'barber' }),
+    // today snapshot
+    Appointment.countDocuments(apptTodayFilter),
+    Appointment.countDocuments({ ...apptTodayFilter, status: 'completed' }),
+    Appointment.countDocuments({ ...apptTodayFilter, status: 'pending' }),
+    Appointment.countDocuments({ ...apptTodayFilter, status: { $in: ['cancelled', 'rejected'] } }),
+    Invoice.aggregate([{ $match: invoiceTodayFilter }, { $group: { _id: null, t: { $sum: '$total' } } }])
+  ]);
+
+  const totalRevenue = revenueAgg[0]?.t || 0;
+  const invoiceCount = revenueAgg[0]?.c || 0;
+  const avgTicketSize = invoiceCount > 0 ? Math.round(totalRevenue / invoiceCount) : 0;
+  const todayRevenue = todayRevenueAgg[0]?.t || 0;
+
+  // Repeat customer rate: customers with more than 1 completed appointment
+  const repeatAgg = await Appointment.aggregate([
+    { $match: { shopId, status: 'completed' } },
+    { $group: { _id: '$customerId', cnt: { $sum: 1 } } },
+    { $group: { _id: null, total: { $sum: 1 }, repeats: { $sum: { $cond: [{ $gt: ['$cnt', 1] }, 1, 0] } } } }
+  ]);
+  const repeatData = repeatAgg[0] || { total: 0, repeats: 0 };
+  const repeatCustomerRate = repeatData.total > 0 ? Math.round((repeatData.repeats / repeatData.total) * 100) : 0;
+
+  // ── Chart time buckets ────────────────────────────────────────
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  let buckets = []; // { label, startDate, endDate, dateStrings[] }
+
+  if (period === 'daily') {
+    // Last 7 days
+    for (let i = 6; i >= 0; i--) {
+      const dt = new Date(now); dt.setDate(now.getDate() - i); dt.setHours(0, 0, 0, 0);
+      const dtEnd = new Date(dt); dtEnd.setHours(23, 59, 59, 999);
+      const ds = dt.toISOString().slice(0, 10);
+      buckets.push({ label: dayNames[dt.getDay()], start: dt, end: dtEnd, dateStrings: [ds] });
+    }
+  } else if (period === 'weekly') {
+    // Last 4 weeks
+    for (let i = 3; i >= 0; i--) {
+      const wEnd = new Date(now); wEnd.setDate(now.getDate() - i * 7); wEnd.setHours(23, 59, 59, 999);
+      const wStart = new Date(wEnd); wStart.setDate(wEnd.getDate() - 6); wStart.setHours(0, 0, 0, 0);
+      buckets.push({ label: `Week ${4 - i}`, start: wStart, end: wEnd, dateStrings: datesToStrings(wStart, wEnd) });
+    }
+  } else if (period === 'monthly') {
+    // Last 12 months
+    for (let i = 11; i >= 0; i--) {
+      const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
+      buckets.push({ label: monthNames[mStart.getMonth()], start: mStart, end: mEnd, dateStrings: datesToStrings(mStart, mEnd) });
+    }
+  } else {
+    // yearly — last 5 years
+    for (let i = 4; i >= 0; i--) {
+      const yr = now.getFullYear() - i;
+      const yStart = new Date(yr, 0, 1);
+      const yEnd = new Date(yr, 11, 31, 23, 59, 59, 999);
+      buckets.push({ label: String(yr), start: yStart, end: yEnd, dateStrings: datesToStrings(yStart, yEnd) });
+    }
+  }
+
+  // Build chart data in parallel per bucket
+  const [revenueChart, appointmentChart, customerGrowth] = await Promise.all([
+    // Revenue chart
+    Promise.all(buckets.map(async (b) => {
+      const agg = await Invoice.aggregate([
+        { $match: { shopId, createdAt: { $gte: b.start, $lte: b.end } } },
+        { $group: { _id: null, revenue: { $sum: '$total' } } }
+      ]);
+      return { label: b.label, revenue: agg[0]?.revenue || 0 };
+    })),
+    // Appointment chart
+    Promise.all(buckets.map(async (b) => {
+      const [completed, cancelled, pending] = await Promise.all([
+        Appointment.countDocuments({ shopId, date: { $in: b.dateStrings }, status: 'completed' }),
+        Appointment.countDocuments({ shopId, date: { $in: b.dateStrings }, status: { $in: ['cancelled', 'rejected'] } }),
+        Appointment.countDocuments({ shopId, date: { $in: b.dateStrings }, status: 'pending' })
+      ]);
+      return { label: b.label, completed, cancelled, pending };
+    })),
+    // Customer growth chart
+    Promise.all(buckets.map(async (b) => {
+      const count = await Customer.countDocuments({ shopId, deleted: false, createdAt: { $gte: b.start, $lte: b.end } });
+      return { label: b.label, count };
+    }))
+  ]);
+
+  // ── 4. Payment method breakdown ───────────────────────────────
+  const paymentMethodBreakdown = await Invoice.aggregate([
+    { $match: invoicePeriodFilter },
+    { $group: { _id: '$method', count: { $sum: 1 }, total: { $sum: '$total' } } },
+    { $project: { _id: 0, method: '$_id', count: 1, total: 1 } },
+    { $sort: { total: -1 } }
+  ]);
+
+  // ── 5. Top 5 services ────────────────────────────────────────
+  const topServices = await Appointment.aggregate([
+    { $match: { shopId, date: { $in: periodDateStrings }, status: 'completed' } },
+    { $unwind: { path: '$services', preserveNullAndEmptyArrays: true } },
+    {
+      $group: {
+        _id: { $ifNull: ['$services.name', '$serviceName'] },
+        count: { $sum: 1 },
+        revenue: { $sum: { $ifNull: ['$services.price', '$price'] } }
+      }
+    },
+    { $sort: { count: -1 } },
+    { $limit: 5 },
+    { $project: { _id: 0, name: '$_id', count: 1, revenue: 1 } }
+  ]);
+
+  // ── 6. Recent appointments ───────────────────────────────────
+  const recentAppointments = await Appointment.find({ shopId })
+    .populate('customerId', 'name mobile')
+    .sort('-createdAt')
+    .limit(5)
+    .lean();
+
+  // ── Build response ────────────────────────────────────────────
+  res.json({
+    summary: {
+      totalAppointments,
+      completedAppointments,
+      pendingAppointments,
+      cancelledAppointments,
+      totalRevenue,
+      avgTicketSize,
+      totalCustomers,
+      newCustomers,
+      totalServices,
+      onlineBookings,
+      walkInBookings,
+      repeatCustomerRate
+    },
+    revenueChart,
+    appointmentChart,
+    paymentMethodBreakdown,
+    topServices,
+    recentAppointments,
+    customerGrowth,
+    todaySnapshot: {
+      todayTotal,
+      todayCompleted,
+      todayPending,
+      todayCancelled,
+      todayRevenue
+    }
+  });
 }));
 r.get('/appointments', wrap(async (req, res) => {
   // Calendar mode or unpaginated full list

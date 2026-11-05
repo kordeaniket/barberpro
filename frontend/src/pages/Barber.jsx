@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Routes, Route } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -12,6 +12,10 @@ import {
   Inject
 } from '@syncfusion/ej2-react-schedule';
 import '@syncfusion/ej2/tailwind.css';
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 import api from '../api';
 import Shell, { fmt } from '../components/Shell';
 import ConfirmModal from '../components/Modal';
@@ -22,11 +26,9 @@ import {
   Calendar,
   Users,
   Scissors,
-  DollarSign,
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Share2,
   Copy,
   Check,
@@ -41,18 +43,25 @@ import {
   Filter,
   Settings,
   Image as ImageIcon,
-  MapPin,
   Save,
   Building,
   KeyRound,
-  ExternalLink,
   Store,
   Table,
   ChevronLeft,
   ChevronRight,
   Search,
   RefreshCw,
-  X
+  X,
+  IndianRupee,
+  BarChart3,
+  PieChart as PieChartIcon,
+  UserPlus,
+  Repeat,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Activity
 } from 'lucide-react';
 
 const barberLinks = [
@@ -71,16 +80,39 @@ function useLive() {
 
 function Home() {
   const d = useDispatch();
-  const s = useSelector((x) => x.ui.data.dash) || {};
   const info = useSelector((x) => x.ui.data.shopinfo);
   const [copied, setCopied] = useState(false);
+  const [period, setPeriod] = useState('daily');
+  const [dash, setDash] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useLive();
 
+  const loadDashboard = useCallback(async (p) => {
+    setLoading(true);
+    try {
+      const res = await api.get('/barber/dashboard', { params: { period: p } });
+      setDash(res.data);
+    } catch (e) {
+      console.error('Dashboard load failed', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
     d(ui.actions.fetchRequest({ key: 'shopinfo', url: '/barber/shop' }));
   }, [d]);
+
+  useEffect(() => {
+    loadDashboard(period);
+  }, [period, loadDashboard]);
+
+  // Auto-refresh on notification
+  const refreshTrigger = useSelector((x) => x.ui.refreshTrigger);
+  useEffect(() => {
+    if (refreshTrigger > 0) loadDashboard(period);
+  }, [refreshTrigger]);
 
   const copyLink = () => {
     if (info?.customerLink) {
@@ -90,55 +122,337 @@ function Home() {
     }
   };
 
+  const s = dash?.summary || {};
+  const snap = dash?.todaySnapshot || {};
+  const PERIODS = [
+    { id: 'daily', label: 'Today' },
+    { id: 'weekly', label: 'This Week' },
+    { id: 'monthly', label: 'This Month' },
+    { id: 'yearly', label: 'This Year' },
+  ];
+  const PIE_COLORS = ['#d97706', '#0ea5e9', '#8b5cf6', '#10b981'];
+  const PAYMENT_LABELS = { cash: '💵 Cash', upi: '📱 UPI', card: '💳 Card', online: '🌐 Online' };
+
   return (
     <Shell
       title="Store Dashboard"
-      subtitle={info?.shop?.name ? `${info.shop.name} • Shop Code: ${info.shop.shopCode}` : "Today's appointments & live activity"}
+      subtitle={info?.shop?.name ? `${info.shop.name} • ${info.shop.shopCode}` : "Business analytics & performance"}
       links={barberLinks}
+      actions={
+        <button onClick={() => loadDashboard(period)} className="btn-o p-2.5 text-stone-600 hover:text-stone-900" title="Refresh">
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      }
     >
-      {/* Metric Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Stat l="Today's Appointments" v={s.total} icon={CalendarDays} color="amber" />
-        <Stat l="Completed Cuts" v={s.completed} icon={CheckCircle2} color="emerald" />
-        <Stat l="Pending Requests" v={s.pending} icon={Clock} color="purple" />
-        <Stat l="Cancelled / No-Show" v={s.cancelled} icon={XCircle} color="stone" />
-        <Stat l="Today's Sales" v={`₹${(s.todaySales || 0).toLocaleString()}`} icon={DollarSign} color="amber" />
-        <Stat l="Monthly Revenue" v={`₹${(s.monthSales || 0).toLocaleString()}`} icon={TrendingUp} color="emerald" />
-        <Stat l="Registered Clients" v={s.customers} icon={Users} color="blue" />
-        <Stat l="Active Services" v={info?.servicesCount ?? '–'} icon={Scissors} color="stone" />
+      {/* Period Filter Pills */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 p-1 bg-stone-200/70 rounded-2xl w-fit">
+          {PERIODS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setPeriod(p.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                period === p.id
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-stone-500 font-medium">
+          {period === 'daily' ? "Today's Snapshot" : period === 'weekly' ? 'Last 7 Days' : period === 'monthly' ? 'Current Month' : 'Year to Date'}
+        </span>
+      </div>
+
+      {/* Today's Quick Strip (always visible) */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {[
+          { l: "Today's Bookings", v: snap.todayTotal, icon: CalendarDays, c: 'text-amber-600 bg-amber-50' },
+          { l: 'Completed', v: snap.todayCompleted, icon: CheckCircle2, c: 'text-emerald-600 bg-emerald-50' },
+          { l: 'Pending Now', v: snap.todayPending, icon: Clock, c: 'text-purple-600 bg-purple-50' },
+          { l: 'Cancelled', v: snap.todayCancelled, icon: XCircle, c: 'text-stone-500 bg-stone-100' },
+          { l: "Today's Revenue", v: `₹${(snap.todayRevenue || 0).toLocaleString('en-IN')}`, icon: IndianRupee, c: 'text-amber-600 bg-amber-50' },
+        ].map((item, i) => (
+          <div key={i} className="card p-3 flex items-center gap-2.5">
+            <div className={`p-2 rounded-xl shrink-0 ${item.c}`}>
+              <item.icon className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-stone-500 font-medium truncate">{item.l}</p>
+              <p className="text-sm font-bold text-stone-900 truncate">{item.v ?? '–'}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Main KPI Cards Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <DashCard label="Total Appointments" value={s.totalAppointments} icon={CalendarDays} color="amber" />
+        <DashCard label="Completed" value={s.completedAppointments} icon={CheckCircle2} color="emerald" />
+        <DashCard label="Total Revenue" value={`₹${(s.totalRevenue || 0).toLocaleString('en-IN')}`} icon={IndianRupee} color="amber" isCurrency />
+        <DashCard label="Avg. Ticket Size" value={`₹${(s.avgTicketSize || 0).toLocaleString('en-IN')}`} icon={Wallet} color="blue" isCurrency />
+        <DashCard label="Registered Clients" value={s.totalCustomers} icon={Users} color="blue" />
+        <DashCard label="New Clients" value={s.newCustomers} icon={UserPlus} color="purple" sub={period !== 'daily' ? `in this ${period.replace('ly','')}` : 'today'} />
+        <DashCard label="Online Bookings" value={s.onlineBookings} icon={Activity} color="emerald" />
+        <DashCard label="Walk-In Bookings" value={s.walkInBookings} icon={Store} color="stone" />
+        <DashCard label="Pending Requests" value={s.pendingAppointments} icon={Clock} color="purple" />
+        <DashCard label="Cancelled" value={s.cancelledAppointments} icon={XCircle} color="stone" />
+        <DashCard label="Active Services" value={s.totalServices} icon={Scissors} color="amber" />
+        <DashCard label="Repeat Client Rate" value={`${s.repeatCustomerRate || 0}%`} icon={Repeat} color="emerald" />
+      </div>
+
+      {/* Charts Row 1: Revenue + Appointments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Revenue Area Chart */}
+        <div className="card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-amber-600" />
+              Revenue Trend
+            </h3>
+            <span className="text-[10px] text-stone-400 uppercase font-semibold tracking-wider">₹ INR</span>
+          </div>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dash?.revenueChart || []}>
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#d97706" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#d97706" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                  formatter={(v) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="#d97706" strokeWidth={2.5} fill="url(#revGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Appointments Bar Chart */}
+        <div className="card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-600" />
+              Appointment Breakdown
+            </h3>
+          </div>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dash?.appointmentChart || []} barGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
+                <Bar dataKey="completed" name="Completed" fill="#059669" radius={[4,4,0,0]} />
+                <Bar dataKey="pending" name="Pending" fill="#8b5cf6" radius={[4,4,0,0]} />
+                <Bar dataKey="cancelled" name="Cancelled" fill="#78716c" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row 2: Payment Breakdown + Customer Growth */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Payment Method Pie Chart */}
+        <div className="card p-4 space-y-3">
+          <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
+            <PieChartIcon className="w-4 h-4 text-purple-600" />
+            Payment Methods
+          </h3>
+          {(dash?.paymentMethodBreakdown || []).length > 0 ? (
+            <div className="flex items-center gap-4">
+              <div className="w-40 h-40 shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={dash.paymentMethodBreakdown}
+                      dataKey="total"
+                      nameKey="method"
+                      cx="50%" cy="50%"
+                      innerRadius={35} outerRadius={65}
+                      paddingAngle={3}
+                      strokeWidth={0}
+                    >
+                      {dash.paymentMethodBreakdown.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '12px' }}
+                      formatter={(v, name) => [`₹${Number(v).toLocaleString('en-IN')}`, PAYMENT_LABELS[name] || name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex-1 space-y-2">
+                {dash.paymentMethodBreakdown.map((pm, i) => (
+                  <div key={pm.method} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <span className="font-medium text-stone-700">{PAYMENT_LABELS[pm.method] || pm.method}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-stone-900">₹{Number(pm.total).toLocaleString('en-IN')}</span>
+                      <span className="text-stone-400 ml-1">({pm.count})</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-stone-400 text-xs">No payment data for this period</div>
+          )}
+        </div>
+
+        {/* Customer Growth Chart */}
+        <div className="card p-4 space-y-3">
+          <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
+            <UserPlus className="w-4 h-4 text-emerald-600" />
+            New Client Registrations
+          </h3>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dash?.customerGrowth || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '12px' }} formatter={(v) => [v, 'New Clients']} />
+                <Bar dataKey="count" name="New Clients" fill="#10b981" radius={[6,6,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Row: Top Services + Recent Appointments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top Services */}
+        <div className="card p-4 space-y-3">
+          <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
+            <Scissors className="w-4 h-4 text-amber-600" />
+            Top Services
+          </h3>
+          {(dash?.topServices || []).length > 0 ? (
+            <div className="space-y-2">
+              {dash.topServices.map((svc, i) => {
+                const maxCount = dash.topServices[0]?.count || 1;
+                return (
+                  <div key={i} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-stone-800 truncate max-w-[60%]">{svc.name}</span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-stone-500">{svc.count} bookings</span>
+                        <span className="font-bold text-amber-700">₹{Number(svc.revenue).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                    <div className="w-full h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.max(8, (svc.count / maxCount) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-stone-400 text-xs">No service data for this period</div>
+          )}
+        </div>
+
+        {/* Recent Appointments */}
+        <div className="card p-4 space-y-3">
+          <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-blue-600" />
+            Recent Appointments
+          </h3>
+          {(dash?.recentAppointments || []).length > 0 ? (
+            <div className="space-y-2">
+              {dash.recentAppointments.map((a) => (
+                <div key={a._id} className="flex items-center gap-3 p-2.5 rounded-xl bg-stone-50/80 border border-stone-100 hover:border-stone-200 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center shrink-0 text-xs">
+                    {a.customerId?.name ? a.customerId.name[0].toUpperCase() : 'C'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-stone-900 text-xs truncate">{a.customerId?.name || 'Walk-In'}</span>
+                      <StatusBadge status={a.status} />
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-stone-500">
+                      <span>{a.serviceName}</span>
+                      <span>•</span>
+                      <span>{a.date}</span>
+                      <span>•</span>
+                      <span className="font-bold text-stone-700">₹{a.price}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-stone-400 text-xs">No recent appointments</div>
+          )}
+        </div>
       </div>
 
       {/* Customer Booking Link Banner */}
       {info?.customerLink && (
-        <div className="card border-amber-200/80 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-5 space-y-3">
+        <div className="card border-amber-200/80 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 space-y-2.5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-amber-600" />
-                <h3 className="font-bold text-stone-900 text-sm sm:text-base">
-                  Your Client Booking Portal Link
-                </h3>
+                <h3 className="font-bold text-stone-900 text-sm">Client Booking Portal</h3>
               </div>
-              <p className="text-xs text-stone-500">
-                Share this link with your customers to let them book appointments online 24/7.
-              </p>
+              <p className="text-[11px] text-stone-500">Share this link for 24/7 online booking</p>
             </div>
-
-            <button
-              onClick={copyLink}
-              className="btn-brand self-start sm:self-auto shrink-0 text-xs py-2 px-3.5"
-            >
+            <button onClick={copyLink} className="btn-brand self-start sm:self-auto shrink-0 text-xs py-2 px-3.5">
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? 'Copied to Clipboard!' : 'Copy Booking Link'}</span>
+              <span>{copied ? 'Copied!' : 'Copy Link'}</span>
             </button>
           </div>
-
-          <div className="bg-white/80 border border-stone-200 rounded-xl px-3.5 py-2 text-xs font-mono text-stone-700 break-all select-all flex items-center justify-between gap-2">
-            <span>{info.customerLink}</span>
+          <div className="bg-white/80 border border-stone-200 rounded-xl px-3 py-1.5 text-xs font-mono text-stone-700 break-all select-all">
+            {info.customerLink}
           </div>
         </div>
       )}
     </Shell>
+  );
+}
+
+/* Mini dashboard stat card component */
+function DashCard({ label, value, icon: Icon, color = 'amber', isCurrency, sub }) {
+  const colorMap = {
+    amber: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100' },
+    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100' },
+    blue: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
+    purple: { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100' },
+    stone: { bg: 'bg-stone-100', text: 'text-stone-600', border: 'border-stone-200' },
+  };
+  const c = colorMap[color] || colorMap.amber;
+  return (
+    <div className={`card card-hover p-3.5 flex items-start justify-between gap-2 border ${c.border}`}>
+      <div className="space-y-0.5 min-w-0">
+        <p className="text-[11px] font-medium text-stone-500 truncate">{label}</p>
+        <p className={`text-lg font-bold tracking-tight text-stone-900 truncate ${isCurrency ? 'tabular-nums' : ''}`}>{value ?? '–'}</p>
+        {sub && <p className="text-[10px] text-stone-400">{sub}</p>}
+      </div>
+      {Icon && (
+        <div className={`p-2 rounded-xl shrink-0 ${c.bg} ${c.text}`}>
+          <Icon className="w-4 h-4" />
+        </div>
+      )}
+    </div>
   );
 }
 
