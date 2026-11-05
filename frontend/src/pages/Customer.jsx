@@ -59,7 +59,7 @@ function playNotificationChime() {
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
     osc.start();
     osc.stop(ctx.currentTime + 0.3);
-  } catch {}
+  } catch { }
 }
 
 const msgOf = (e) => e.response?.data?.message || e.message;
@@ -365,7 +365,7 @@ export default function Customer() {
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   const markNotifRead = (id) => {
@@ -737,7 +737,7 @@ export default function Customer() {
     <div className="h-screen w-full bg-[#0a0b0e] text-stone-100 font-sans selection:bg-amber-500/30 selection:text-amber-200 flex justify-center items-center sm:p-4 overflow-hidden">
       {/* Smartphone Frame Container */}
       <div className="w-full max-w-md sm:max-w-lg bg-[#121318] border-x sm:border border-stone-800/90 sm:rounded-[38px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] h-full sm:h-[94vh] sm:max-h-[900px] flex flex-col relative overflow-hidden">
-        
+
         {/* Decorative Phone Speaker Notch on Desktop (Fixed top) */}
         <div className="hidden sm:flex items-center justify-center pt-2 pb-1 bg-[#121318] border-b border-stone-800/40 shrink-0">
           <div className="w-24 h-4 bg-stone-900/90 rounded-full flex items-center justify-center gap-1.5 border border-stone-800/80">
@@ -1142,566 +1142,566 @@ export default function Customer() {
             </div>
           )}
 
-        {/* ================= TAB 2: BOOKING FLOW ================= */}
-        {activeTab === 'book' && (
-          <div className="space-y-2.5 animate-in fade-in duration-200">
-            {/* Step 1: Services — compact single-row items */}
-            <div className="bg-[#181920] border border-stone-800 rounded-2xl p-3 space-y-2 text-stone-100">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-stone-200 text-xs flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
-                  Choose Services
-                </h3>
-                {selectedServices.length > 0 && (
-                  <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-md">
-                    {selectedServices.length} sel · ₹{totalPrice} · {totalDuration}m
-                  </span>
-                )}
-              </div>
-
-              {/* Selected pills */}
-              {selectedServices.length > 0 && (
-                <div className="flex flex-wrap gap-1 items-center">
-                  {selectedServices.map((s) => (
-                    <span key={s._id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[10px] font-medium text-amber-200">
-                      {s.name} <span className="text-amber-400 font-bold">₹{s.price}</span>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); toggleService(s); }} className="text-stone-400 hover:text-red-400">
-                        <X className="w-3 h-3" />
-                      </button>
+          {/* ================= TAB 2: BOOKING FLOW ================= */}
+          {activeTab === 'book' && (
+            <div className="space-y-2.5 animate-in fade-in duration-200">
+              {/* Step 1: Services — compact single-row items */}
+              <div className="bg-[#181920] border border-stone-800 rounded-2xl p-3 space-y-2 text-stone-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-stone-200 text-xs flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                    Choose Services
+                  </h3>
+                  {selectedServices.length > 0 && (
+                    <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-md">
+                      {selectedServices.length} sel · ₹{totalPrice} · {totalDuration}m
                     </span>
-                  ))}
-                  <button type="button" onClick={() => setSelectedServices([])} className="text-[10px] text-amber-400 hover:text-amber-300 font-semibold underline ml-1">Clear</button>
+                  )}
                 </div>
-              )}
 
-              {/* Search */}
-              {svcs.length > 5 && (
-                <div className="relative">
-                  <Search className="w-3 h-3 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input type="text" placeholder="Search services..." className="inp bg-[#14151b] border-stone-700/80 text-stone-100 placeholder:text-stone-500 pl-7 py-1.5 text-[11px]" value={searchSvc} onChange={(e) => setSearchSvc(e.target.value)} />
+                {/* Selected pills */}
+                {selectedServices.length > 0 && (
+                  <div className="flex flex-wrap gap-1 items-center">
+                    {selectedServices.map((s) => (
+                      <span key={s._id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[10px] font-medium text-amber-200">
+                        {s.name} <span className="text-amber-400 font-bold">₹{s.price}</span>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); toggleService(s); }} className="text-stone-400 hover:text-red-400">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <button type="button" onClick={() => setSelectedServices([])} className="text-[10px] text-amber-400 hover:text-amber-300 font-semibold underline ml-1">Clear</button>
+                  </div>
+                )}
+
+                {/* Search */}
+                {svcs.length > 5 && (
+                  <div className="relative">
+                    <Search className="w-3 h-3 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input type="text" placeholder="Search services..." className="inp bg-[#14151b] border-stone-700/80 text-stone-100 placeholder:text-stone-500 pl-7 py-1.5 text-[11px]" value={searchSvc} onChange={(e) => setSearchSvc(e.target.value)} />
+                  </div>
+                )}
+
+                {/* Service list — single row per item */}
+                <div className="space-y-1 max-h-44 overflow-y-auto">
+                  {filteredServices.map((s) => {
+                    const isSelected = selectedServices.some((x) => x._id === s._id);
+                    return (
+                      <button
+                        key={s._id}
+                        type="button"
+                        onClick={() => toggleService(s)}
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all ${isSelected
+                          ? 'border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30 text-stone-100'
+                          : 'border-stone-800 bg-[#15161c] hover:border-stone-700 text-stone-300'}`}
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-stone-700 bg-stone-900'}`}>
+                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                        <span className="text-[11px] font-semibold flex-1 truncate">{s.name}</span>
+                        <span className="text-[10px] text-stone-400 shrink-0">{s.duration}m</span>
+                        <span className="text-[11px] font-bold text-amber-400 shrink-0">₹{s.price}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
-
-              {/* Service list — single row per item */}
-              <div className="space-y-1 max-h-44 overflow-y-auto">
-                {filteredServices.map((s) => {
-                  const isSelected = selectedServices.some((x) => x._id === s._id);
-                  return (
-                    <button
-                      key={s._id}
-                      type="button"
-                      onClick={() => toggleService(s)}
-                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all ${isSelected
-                        ? 'border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30 text-stone-100'
-                        : 'border-stone-800 bg-[#15161c] hover:border-stone-700 text-stone-300'}`}
-                    >
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-stone-700 bg-stone-900'}`}>
-                        {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                      </div>
-                      <span className="text-[11px] font-semibold flex-1 truncate">{s.name}</span>
-                      <span className="text-[10px] text-stone-400 shrink-0">{s.duration}m</span>
-                      <span className="text-[11px] font-bold text-amber-400 shrink-0">₹{s.price}</span>
-                    </button>
-                  );
-                })}
               </div>
-            </div>
 
-            {/* Step 2: Date — compact horizontal strip */}
-            <div className="bg-[#181920] border border-stone-800 rounded-2xl p-3 space-y-2 text-stone-100">
-              <h3 className="font-semibold text-stone-200 text-xs flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
-                Choose Date
-              </h3>
-              <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
-                {upcomingDays.map((d) => {
-                  const isSelected = selectedDate === d.dateStr;
-                  return (
-                    <button
-                      key={d.dateStr}
-                      type="button"
-                      onClick={() => setSelectedDate(d.dateStr)}
-                      className={`min-w-[52px] py-1.5 px-1.5 rounded-xl border text-center transition-all shrink-0 ${isSelected
-                        ? 'bg-amber-600 text-white border-amber-500 shadow-md font-bold'
-                        : 'bg-[#15161c] text-stone-300 border-stone-800 hover:border-stone-700'}`}
-                    >
-                      <span className="text-[9px] uppercase font-bold block opacity-80">{d.dayName}</span>
-                      <span className="text-sm font-extrabold block">{d.dayNumber}</span>
-                      <span className="text-[9px] block opacity-70">{d.month}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Step 3: Time Slots — compact grid */}
-            <div className="bg-[#181920] border border-stone-800 rounded-2xl p-3 space-y-2 text-stone-100">
-              <div className="flex items-center justify-between">
+              {/* Step 2: Date — compact horizontal strip */}
+              <div className="bg-[#181920] border border-stone-800 rounded-2xl p-3 space-y-2 text-stone-100">
                 <h3 className="font-semibold text-stone-200 text-xs flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">3</span>
-                  Choose Time
+                  <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                  Choose Date
                 </h3>
-                {selectedSlot && (
-                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
-                    {fmt(selectedSlot.startMin)} – {fmt(selectedSlot.startMin + totalDuration)}
-                  </span>
+                <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+                  {upcomingDays.map((d) => {
+                    const isSelected = selectedDate === d.dateStr;
+                    return (
+                      <button
+                        key={d.dateStr}
+                        type="button"
+                        onClick={() => setSelectedDate(d.dateStr)}
+                        className={`min-w-[52px] py-1.5 px-1.5 rounded-xl border text-center transition-all shrink-0 ${isSelected
+                          ? 'bg-amber-600 text-white border-amber-500 shadow-md font-bold'
+                          : 'bg-[#15161c] text-stone-300 border-stone-800 hover:border-stone-700'}`}
+                      >
+                        <span className="text-[9px] uppercase font-bold block opacity-80">{d.dayName}</span>
+                        <span className="text-sm font-extrabold block">{d.dayNumber}</span>
+                        <span className="text-[9px] block opacity-70">{d.month}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Step 3: Time Slots — compact grid */}
+              <div className="bg-[#181920] border border-stone-800 rounded-2xl p-3 space-y-2 text-stone-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-stone-200 text-xs flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">3</span>
+                    Choose Time
+                  </h3>
+                  {selectedSlot && (
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                      {fmt(selectedSlot.startMin)} – {fmt(selectedSlot.startMin + totalDuration)}
+                    </span>
+                  )}
+                </div>
+
+                {selectedServices.length === 0 ? (
+                  <p className="text-[11px] text-stone-500 text-center py-3">Select a service first</p>
+                ) : slotsLoading ? (
+                  <p className="text-[11px] text-stone-400 text-center py-3">Loading available slots...</p>
+                ) : slots.length === 0 ? (
+                  <div className="text-center py-3 text-[11px] text-stone-400">
+                    <p className="font-semibold text-stone-300">No {totalDuration}-min slots available</p>
+                    <p className="text-[10px] text-stone-500">Try another date</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {morningSlots.length > 0 && (
+                      <div>
+                        <span className="text-[10px] font-semibold text-stone-400 uppercase flex items-center gap-1 mb-1">
+                          <Sun className="w-3 h-3 text-amber-500" /> Morning
+                        </span>
+                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+                          {morningSlots.map((s) => {
+                            const isPicked = selectedSlot?.startMin === s.startMin;
+                            const disabled = isSlotDisabled(s);
+                            return (
+                              <button key={s.startMin} disabled={disabled} onClick={() => setSelectedSlot(s)}
+                                className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${disabled
+                                  ? 'bg-[#121317] text-stone-600 line-through cursor-not-allowed opacity-40 border border-stone-900'
+                                  : isPicked
+                                    ? 'bg-amber-600 text-white shadow-md border border-amber-500'
+                                    : 'bg-[#15161c] border border-stone-800 text-stone-300 hover:border-amber-500/40'}`}>
+                                {fmt(s.startMin)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {afternoonSlots.length > 0 && (
+                      <div>
+                        <span className="text-[10px] font-semibold text-stone-400 uppercase flex items-center gap-1 mb-1">
+                          <Sunset className="w-3 h-3 text-amber-500" /> Afternoon
+                        </span>
+                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+                          {afternoonSlots.map((s) => {
+                            const isPicked = selectedSlot?.startMin === s.startMin;
+                            const disabled = isSlotDisabled(s);
+                            return (
+                              <button key={s.startMin} disabled={disabled} onClick={() => setSelectedSlot(s)}
+                                className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${disabled
+                                  ? 'bg-[#121317] text-stone-600 line-through cursor-not-allowed opacity-40 border border-stone-900'
+                                  : isPicked
+                                    ? 'bg-amber-600 text-white shadow-md border border-amber-500'
+                                    : 'bg-[#15161c] border border-stone-800 text-stone-300 hover:border-amber-500/40'}`}>
+                                {fmt(s.startMin)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {eveningSlots.length > 0 && (
+                      <div>
+                        <span className="text-[10px] font-semibold text-stone-400 uppercase flex items-center gap-1 mb-1">
+                          <Moon className="w-3 h-3 text-indigo-400" /> Evening
+                        </span>
+                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+                          {eveningSlots.map((s) => {
+                            const isPicked = selectedSlot?.startMin === s.startMin;
+                            const disabled = isSlotDisabled(s);
+                            return (
+                              <button key={s.startMin} disabled={disabled} onClick={() => setSelectedSlot(s)}
+                                className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${disabled
+                                  ? 'bg-[#121317] text-stone-600 line-through cursor-not-allowed opacity-40 border border-stone-900'
+                                  : isPicked
+                                    ? 'bg-amber-600 text-white shadow-md border border-amber-500'
+                                    : 'bg-[#15161c] border border-stone-800 text-stone-300 hover:border-amber-500/40'}`}>
+                                {fmt(s.startMin)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {selectedServices.length === 0 ? (
-                <p className="text-[11px] text-stone-500 text-center py-3">Select a service first</p>
-              ) : slotsLoading ? (
-                <p className="text-[11px] text-stone-400 text-center py-3">Loading available slots...</p>
-              ) : slots.length === 0 ? (
-                <div className="text-center py-3 text-[11px] text-stone-400">
-                  <p className="font-semibold text-stone-300">No {totalDuration}-min slots available</p>
-                  <p className="text-[10px] text-stone-500">Try another date</p>
+              {/* Confirm bar */}
+              {selectedServices.length > 0 && selectedSlot && (
+                <div className="bg-gradient-to-r from-amber-950/40 via-[#181920] to-[#181920] border border-amber-500/40 rounded-2xl p-3 space-y-2 text-stone-100">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px]">
+                      <span className="font-semibold text-white block">{selectedServices.map((s) => s.name).join(' + ')}</span>
+                      <span className="text-stone-400">{selectedDate} · {fmt(selectedSlot.startMin)}–{fmt(selectedSlot.startMin + totalDuration)} · {totalDuration}m</span>
+                    </div>
+                    <span className="text-base font-extrabold text-amber-400">₹{totalPrice}</span>
+                  </div>
+                  <button type="button" onClick={() => setShowConfirmBookingModal(true)} className="btn-brand w-full py-2.5 text-xs shadow-md shadow-amber-600/30">
+                    <CalendarCheck className="w-3.5 h-3.5" />
+                    <span>Confirm Booking</span>
+                  </button>
+                </div>
+              )}
+
+              {bookingMsg && (
+                <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                  <span>{bookingMsg}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ================= TAB 3: APPOINTMENTS ================= */}
+          {activeTab === 'appointments' && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Header with Filter Pills */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-white text-base">Your Appointments</h3>
+                  <span className="text-xs text-stone-400">{bk.length} total</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'active', label: `Active (${bk.filter((b) => ['pending', 'confirmed'].includes(b.status)).length})` },
+                    { id: 'completed', label: 'Completed' },
+                    { id: 'cancelled', label: 'Cancelled' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setApptFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${apptFilter === tab.id
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'bg-[#181920] text-stone-400 border border-stone-800 hover:text-stone-200'
+                        }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {filteredAppointments.length === 0 ? (
+                <div className="bg-[#181920] border border-stone-800 rounded-2xl text-center py-12 text-stone-400 text-xs space-y-2">
+                  <Calendar className="w-10 h-10 text-stone-600 mx-auto" />
+                  <p className="font-semibold text-stone-300 text-sm">No bookings in this category</p>
+                  <p className="text-stone-500">Tap "Book" below to schedule a haircut or styling session.</p>
+                  <button
+                    onClick={() => setActiveTab('book')}
+                    className="btn-brand text-xs py-2 px-4 mt-2"
+                  >
+                    Book New Appointment
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {morningSlots.length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-semibold text-stone-400 uppercase flex items-center gap-1 mb-1">
-                        <Sun className="w-3 h-3 text-amber-500" /> Morning
+                <div className="bg-[#181920] border border-stone-800 rounded-2xl overflow-hidden shadow-xs">
+                  {/* Responsive Table Structure */}
+                  <div className="overflow-x-auto [scrollbar-width:thin]">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="bg-[#13141a] border-b border-stone-800 text-stone-400 font-semibold uppercase text-[10px] tracking-wider">
+                          <th className="py-2.5 px-3">Service</th>
+                          <th className="py-2.5 px-3">Date & Time</th>
+                          <th className="py-2.5 px-3">Price</th>
+                          <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3 text-center">Cancel</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-stone-800/70 text-stone-200">
+                        {paginatedAppointments.map((b) => (
+                          <tr key={b._id} className="hover:bg-[#1f202a] transition-colors">
+                            {/* Service Details */}
+                            <td className="py-2.5 px-3 min-w-[120px]">
+                              <span className="font-bold text-white block truncate leading-tight">
+                                {b.serviceName}
+                              </span>
+                              <span className="text-[10px] text-stone-500 block truncate mt-0.5">
+                                {shopInfo?.shop?.name || 'Salon'}
+                              </span>
+                            </td>
+
+                            {/* Date & Time */}
+                            <td className="py-2.5 px-3 whitespace-nowrap min-w-[100px]">
+                              <span className="text-stone-300 font-medium block">
+                                {b.date}
+                              </span>
+                              <span className="text-[10px] text-amber-400 font-mono block">
+                                {fmt(b.startMin)}
+                              </span>
+                            </td>
+
+                            {/* Price */}
+                            <td className="py-2.5 px-3 whitespace-nowrap font-extrabold text-amber-400">
+                              ₹{b.price}
+                            </td>
+
+                            {/* Status */}
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <StatusBadge status={b.status} />
+                            </td>
+
+                            {/* Cancel Action Icon */}
+                            <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                              {['pending', 'confirmed'].includes(b.status) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setCancelBookingTarget(b)}
+                                  title="Cancel Appointment"
+                                  aria-label="Cancel appointment"
+                                  className="p-1.5 rounded-lg text-red-400 hover:text-red-200 hover:bg-red-500/20 border border-red-500/30 transition-all inline-flex items-center justify-center active:scale-95"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <span className="text-stone-600 text-xs">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Table Pagination Footer */}
+                  {filteredAppointments.length > 0 && (
+                    <div className="bg-[#14151b] border-t border-stone-800 px-3 py-2 flex items-center justify-between text-[11px] text-stone-400">
+                      <span>
+                        Showing <strong className="text-white">{(apptPage - 1) * apptPerPage + 1}</strong>–<strong className="text-white">{Math.min(apptPage * apptPerPage, filteredAppointments.length)}</strong> of <strong className="text-white">{filteredAppointments.length}</strong>
                       </span>
-                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
-                        {morningSlots.map((s) => {
-                          const isPicked = selectedSlot?.startMin === s.startMin;
-                          const disabled = isSlotDisabled(s);
-                          return (
-                            <button key={s.startMin} disabled={disabled} onClick={() => setSelectedSlot(s)}
-                              className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${disabled
-                                ? 'bg-[#121317] text-stone-600 line-through cursor-not-allowed opacity-40 border border-stone-900'
-                                : isPicked
-                                  ? 'bg-amber-600 text-white shadow-md border border-amber-500'
-                                  : 'bg-[#15161c] border border-stone-800 text-stone-300 hover:border-amber-500/40'}`}>
-                              {fmt(s.startMin)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {afternoonSlots.length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-semibold text-stone-400 uppercase flex items-center gap-1 mb-1">
-                        <Sunset className="w-3 h-3 text-amber-500" /> Afternoon
-                      </span>
-                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
-                        {afternoonSlots.map((s) => {
-                          const isPicked = selectedSlot?.startMin === s.startMin;
-                          const disabled = isSlotDisabled(s);
-                          return (
-                            <button key={s.startMin} disabled={disabled} onClick={() => setSelectedSlot(s)}
-                              className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${disabled
-                                ? 'bg-[#121317] text-stone-600 line-through cursor-not-allowed opacity-40 border border-stone-900'
-                                : isPicked
-                                  ? 'bg-amber-600 text-white shadow-md border border-amber-500'
-                                  : 'bg-[#15161c] border border-stone-800 text-stone-300 hover:border-amber-500/40'}`}>
-                              {fmt(s.startMin)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {eveningSlots.length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-semibold text-stone-400 uppercase flex items-center gap-1 mb-1">
-                        <Moon className="w-3 h-3 text-indigo-400" /> Evening
-                      </span>
-                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
-                        {eveningSlots.map((s) => {
-                          const isPicked = selectedSlot?.startMin === s.startMin;
-                          const disabled = isSlotDisabled(s);
-                          return (
-                            <button key={s.startMin} disabled={disabled} onClick={() => setSelectedSlot(s)}
-                              className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${disabled
-                                ? 'bg-[#121317] text-stone-600 line-through cursor-not-allowed opacity-40 border border-stone-900'
-                                : isPicked
-                                  ? 'bg-amber-600 text-white shadow-md border border-amber-500'
-                                  : 'bg-[#15161c] border border-stone-800 text-stone-300 hover:border-amber-500/40'}`}>
-                              {fmt(s.startMin)}
-                            </button>
-                          );
-                        })}
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={apptPage === 1}
+                          onClick={() => setApptPage((p) => Math.max(1, p - 1))}
+                          className="p-1 rounded-lg border border-stone-800 bg-[#191a22] hover:bg-stone-800 disabled:opacity-40 disabled:pointer-events-none text-stone-300 transition-colors"
+                          title="Previous Page"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+
+                        <span className="px-2 py-0.5 rounded bg-[#1a1b24] border border-stone-800 font-bold text-white text-[10px]">
+                          {apptPage} / {totalApptPages}
+                        </span>
+
+                        <button
+                          type="button"
+                          disabled={apptPage >= totalApptPages}
+                          onClick={() => setApptPage((p) => Math.min(totalApptPages, p + 1))}
+                          className="p-1 rounded-lg border border-stone-800 bg-[#191a22] hover:bg-stone-800 disabled:opacity-40 disabled:pointer-events-none text-stone-300 transition-colors"
+                          title="Next Page"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   )}
                 </div>
               )}
             </div>
+          )}
 
-            {/* Confirm bar */}
-            {selectedServices.length > 0 && selectedSlot && (
-              <div className="bg-gradient-to-r from-amber-950/40 via-[#181920] to-[#181920] border border-amber-500/40 rounded-2xl p-3 space-y-2 text-stone-100">
-                <div className="flex items-center justify-between">
-                  <div className="text-[11px]">
-                    <span className="font-semibold text-white block">{selectedServices.map((s) => s.name).join(' + ')}</span>
-                    <span className="text-stone-400">{selectedDate} · {fmt(selectedSlot.startMin)}–{fmt(selectedSlot.startMin + totalDuration)} · {totalDuration}m</span>
+          {/* ================= TAB 4: PROFILE & REWARDS ================= */}
+          {activeTab === 'profile' && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Quick Profile Summary Card */}
+              <div className="bg-[#181920] border border-stone-800 rounded-2xl p-4 flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 font-extrabold text-lg flex items-center justify-center shrink-0 border border-amber-500/30">
+                  {profileData.name ? profileData.name[0].toUpperCase() : 'C'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-white text-sm truncate">{profileData.name || 'Client'}</h4>
+                  <p className="text-xs text-stone-400 font-mono truncate">{profileData.mobile}</p>
+                  {profileData.email && <p className="text-xs text-stone-500 truncate">{profileData.email}</p>}
+                </div>
+              </div>
+
+              {/* Personal Details Form */}
+              <form onSubmit={saveProfile} className="bg-[#181920] border border-stone-800 rounded-2xl p-5 space-y-4 text-stone-100">
+                <div className="flex items-center justify-between pb-2 border-b border-stone-800">
+                  <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                    <User className="w-4 h-4 text-amber-500" />
+                    <span>Personal Details</span>
+                  </h4>
+                  <span className="text-xs text-stone-500">Edit info</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-stone-400">Full Name *</label>
+                    <input
+                      className="inp bg-[#13141b] border-stone-750 text-stone-100 placeholder:text-stone-500"
+                      required
+                      value={profileData.name}
+                      onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                    />
                   </div>
-                  <span className="text-base font-extrabold text-amber-400">₹{totalPrice}</span>
-                </div>
-                <button type="button" onClick={() => setShowConfirmBookingModal(true)} className="btn-brand w-full py-2.5 text-xs shadow-md shadow-amber-600/30">
-                  <CalendarCheck className="w-3.5 h-3.5" />
-                  <span>Confirm Booking</span>
-                </button>
-              </div>
-            )}
 
-            {bookingMsg && (
-              <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-                <span>{bookingMsg}</span>
-              </div>
-            )}
-          </div>
-        )}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-stone-400">Registered Mobile</label>
+                    <input
+                      className="inp bg-stone-900/60 border-stone-800 text-stone-500 font-mono"
+                      readOnly
+                      disabled
+                      value={profileData.mobile}
+                    />
+                  </div>
 
-        {/* ================= TAB 3: APPOINTMENTS ================= */}
-        {activeTab === 'appointments' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Header with Filter Pills */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-white text-base">Your Appointments</h3>
-                <span className="text-xs text-stone-400">{bk.length} total</span>
-              </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-stone-400">Email Address</label>
+                    <input
+                      className="inp bg-[#13141b] border-stone-750 text-stone-100 placeholder:text-stone-500"
+                      type="email"
+                      placeholder="name@example.com"
+                      value={profileData.email}
+                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                    />
+                  </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-                {[
-                  { id: 'all', label: 'All' },
-                  { id: 'active', label: `Active (${bk.filter((b) => ['pending', 'confirmed'].includes(b.status)).length})` },
-                  { id: 'completed', label: 'Completed' },
-                  { id: 'cancelled', label: 'Cancelled' }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setApptFilter(tab.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${apptFilter === tab.id
-                      ? 'bg-amber-600 text-white shadow-sm'
-                      : 'bg-[#181920] text-stone-400 border border-stone-800 hover:text-stone-200'
-                      }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-stone-400">Gender</label>
+                    <select
+                      className="inp bg-[#13141b] border-stone-750 text-stone-100"
+                      value={profileData.gender}
+                      onChange={(e) => setProfileData({ ...profileData, gender: e.target.value })}
+                    >
+                      <option value="unspecified">Prefer not to say</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
 
-            {filteredAppointments.length === 0 ? (
-              <div className="bg-[#181920] border border-stone-800 rounded-2xl text-center py-12 text-stone-400 text-xs space-y-2">
-                <Calendar className="w-10 h-10 text-stone-600 mx-auto" />
-                <p className="font-semibold text-stone-300 text-sm">No bookings in this category</p>
-                <p className="text-stone-500">Tap "Book" below to schedule a haircut or styling session.</p>
-                <button
-                  onClick={() => setActiveTab('book')}
-                  className="btn-brand text-xs py-2 px-4 mt-2"
-                >
-                  Book New Appointment
-                </button>
-              </div>
-            ) : (
-              <div className="bg-[#181920] border border-stone-800 rounded-2xl overflow-hidden shadow-xs">
-                {/* Responsive Table Structure */}
-                <div className="overflow-x-auto [scrollbar-width:thin]">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-[#13141a] border-b border-stone-800 text-stone-400 font-semibold uppercase text-[10px] tracking-wider">
-                        <th className="py-2.5 px-3">Service</th>
-                        <th className="py-2.5 px-3">Date & Time</th>
-                        <th className="py-2.5 px-3">Price</th>
-                        <th className="py-2.5 px-3">Status</th>
-                        <th className="py-2.5 px-3 text-center">Cancel</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-800/70 text-stone-200">
-                      {paginatedAppointments.map((b) => (
-                        <tr key={b._id} className="hover:bg-[#1f202a] transition-colors">
-                          {/* Service Details */}
-                          <td className="py-2.5 px-3 min-w-[120px]">
-                            <span className="font-bold text-white block truncate leading-tight">
-                              {b.serviceName}
-                            </span>
-                            <span className="text-[10px] text-stone-500 block truncate mt-0.5">
-                              {shopInfo?.shop?.name || 'Salon'}
-                            </span>
-                          </td>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-semibold text-stone-400">Date of Birth</label>
+                    <input
+                      type="date"
+                      className="inp bg-[#13141b] border-stone-750 text-stone-100"
+                      value={profileData.dob}
+                      onChange={(e) => setProfileData({ ...profileData, dob: e.target.value })}
+                    />
+                  </div>
 
-                          {/* Date & Time */}
-                          <td className="py-2.5 px-3 whitespace-nowrap min-w-[100px]">
-                            <span className="text-stone-300 font-medium block">
-                              {b.date}
-                            </span>
-                            <span className="text-[10px] text-amber-400 font-mono block">
-                              {fmt(b.startMin)}
-                            </span>
-                          </td>
-
-                          {/* Price */}
-                          <td className="py-2.5 px-3 whitespace-nowrap font-extrabold text-amber-400">
-                            ₹{b.price}
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-2.5 px-3 whitespace-nowrap">
-                            <StatusBadge status={b.status} />
-                          </td>
-
-                          {/* Cancel Action Icon */}
-                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                            {['pending', 'confirmed'].includes(b.status) ? (
-                              <button
-                                type="button"
-                                onClick={() => setCancelBookingTarget(b)}
-                                title="Cancel Appointment"
-                                aria-label="Cancel appointment"
-                                className="p-1.5 rounded-lg text-red-400 hover:text-red-200 hover:bg-red-500/20 border border-red-500/30 transition-all inline-flex items-center justify-center active:scale-95"
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <span className="text-stone-600 text-xs">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-semibold text-stone-400">
+                      Hair & Grooming Preferences (Notes for Barber)
+                    </label>
+                    <textarea
+                      rows={2}
+                      className="inp bg-[#13141b] border-stone-750 text-stone-100 placeholder:text-stone-500"
+                      placeholder="e.g. Low skin fade, beard lining, sensitive skin..."
+                      value={profileData.notes}
+                      onChange={(e) => setProfileData({ ...profileData, notes: e.target.value })}
+                    />
+                  </div>
                 </div>
 
-                {/* Table Pagination Footer */}
-                {filteredAppointments.length > 0 && (
-                  <div className="bg-[#14151b] border-t border-stone-800 px-3 py-2 flex items-center justify-between text-[11px] text-stone-400">
-                    <span>
-                      Showing <strong className="text-white">{(apptPage - 1) * apptPerPage + 1}</strong>–<strong className="text-white">{Math.min(apptPage * apptPerPage, filteredAppointments.length)}</strong> of <strong className="text-white">{filteredAppointments.length}</strong>
-                    </span>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        disabled={apptPage === 1}
-                        onClick={() => setApptPage((p) => Math.max(1, p - 1))}
-                        className="p-1 rounded-lg border border-stone-800 bg-[#191a22] hover:bg-stone-800 disabled:opacity-40 disabled:pointer-events-none text-stone-300 transition-colors"
-                        title="Previous Page"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-
-                      <span className="px-2 py-0.5 rounded bg-[#1a1b24] border border-stone-800 font-bold text-white text-[10px]">
-                        {apptPage} / {totalApptPages}
-                      </span>
-
-                      <button
-                        type="button"
-                        disabled={apptPage >= totalApptPages}
-                        onClick={() => setApptPage((p) => Math.min(totalApptPages, p + 1))}
-                        className="p-1 rounded-lg border border-stone-800 bg-[#191a22] hover:bg-stone-800 disabled:opacity-40 disabled:pointer-events-none text-stone-300 transition-colors"
-                        title="Next Page"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                {profileMsg && (
+                  <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                    <span>{profileMsg}</span>
                   </div>
                 )}
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* ================= TAB 4: PROFILE & REWARDS ================= */}
-        {activeTab === 'profile' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Quick Profile Summary Card */}
-            <div className="bg-[#181920] border border-stone-800 rounded-2xl p-4 flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 font-extrabold text-lg flex items-center justify-center shrink-0 border border-amber-500/30">
-                {profileData.name ? profileData.name[0].toUpperCase() : 'C'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="font-bold text-white text-sm truncate">{profileData.name || 'Client'}</h4>
-                <p className="text-xs text-stone-400 font-mono truncate">{profileData.mobile}</p>
-                {profileData.email && <p className="text-xs text-stone-500 truncate">{profileData.email}</p>}
-              </div>
-            </div>
-
-            {/* Personal Details Form */}
-            <form onSubmit={saveProfile} className="bg-[#181920] border border-stone-800 rounded-2xl p-5 space-y-4 text-stone-100">
-              <div className="flex items-center justify-between pb-2 border-b border-stone-800">
-                <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                  <User className="w-4 h-4 text-amber-500" />
-                  <span>Personal Details</span>
-                </h4>
-                <span className="text-xs text-stone-500">Edit info</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-stone-400">Full Name *</label>
-                  <input
-                    className="inp bg-[#13141b] border-stone-750 text-stone-100 placeholder:text-stone-500"
-                    required
-                    value={profileData.name}
-                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-stone-400">Registered Mobile</label>
-                  <input
-                    className="inp bg-stone-900/60 border-stone-800 text-stone-500 font-mono"
-                    readOnly
-                    disabled
-                    value={profileData.mobile}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-stone-400">Email Address</label>
-                  <input
-                    className="inp bg-[#13141b] border-stone-750 text-stone-100 placeholder:text-stone-500"
-                    type="email"
-                    placeholder="name@example.com"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-stone-400">Gender</label>
-                  <select
-                    className="inp bg-[#13141b] border-stone-750 text-stone-100"
-                    value={profileData.gender}
-                    onChange={(e) => setProfileData({ ...profileData, gender: e.target.value })}
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    disabled={profileSaving}
+                    className="btn-brand px-5 py-2.5 text-xs sm:text-sm"
                   >
-                    <option value="unspecified">Prefer not to say</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
+                    <Save className="w-4 h-4" />
+                    <span>{profileSaving ? 'Saving...' : 'Save Profile Changes'}</span>
+                  </button>
                 </div>
+              </form>
 
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-semibold text-stone-400">Date of Birth</label>
-                  <input
-                    type="date"
-                    className="inp bg-[#13141b] border-stone-750 text-stone-100"
-                    value={profileData.dob}
-                    onChange={(e) => setProfileData({ ...profileData, dob: e.target.value })}
-                  />
-                </div>
+              {/* Quick Actions & Security */}
+              <div className="bg-[#181920] border border-stone-800 rounded-2xl p-4 space-y-2">
+                <h4 className="font-bold text-stone-400 text-xs uppercase tracking-wider pb-1">
+                  Account & Security
+                </h4>
 
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-semibold text-stone-400">
-                    Hair & Grooming Preferences (Notes for Barber)
-                  </label>
-                  <textarea
-                    rows={2}
-                    className="inp bg-[#13141b] border-stone-750 text-stone-100 placeholder:text-stone-500"
-                    placeholder="e.g. Low skin fade, beard lining, sensitive skin..."
-                    value={profileData.notes}
-                    onChange={(e) => setProfileData({ ...profileData, notes: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {profileMsg && (
-                <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                  <span>{profileMsg}</span>
-                </div>
-              )}
-
-              <div className="flex justify-end pt-1">
                 <button
-                  type="submit"
-                  disabled={profileSaving}
-                  className="btn-brand px-5 py-2.5 text-xs sm:text-sm"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{profileSaving ? 'Saving...' : 'Save Profile Changes'}</span>
-                </button>
-              </div>
-            </form>
-
-            {/* Quick Actions & Security */}
-            <div className="bg-[#181920] border border-stone-800 rounded-2xl p-4 space-y-2">
-              <h4 className="font-bold text-stone-400 text-xs uppercase tracking-wider pb-1">
-                Account & Security
-              </h4>
-
-              <button
-                type="button"
-                onClick={() => setShowPasswordModal(true)}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-800/60 text-left text-xs text-stone-300 font-medium transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <KeyRound className="w-4 h-4 text-stone-500" />
-                  <span>Update Password</span>
-                </span>
-                <ChevronRight className="w-4 h-4 text-stone-500" />
-              </button>
-
-              {shopInfo?.shop?.mobile && (
-                <a
-                  href={`tel:${shopInfo.shop.mobile}`}
+                  type="button"
+                  onClick={() => setShowPasswordModal(true)}
                   className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-800/60 text-left text-xs text-stone-300 font-medium transition-colors"
                 >
                   <span className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-stone-500" />
-                    <span>Call Salon Contact</span>
+                    <KeyRound className="w-4 h-4 text-stone-500" />
+                    <span>Update Password</span>
                   </span>
                   <ChevronRight className="w-4 h-4 text-stone-500" />
-                </a>
-              )}
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setShowLogoutModal(true)}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-red-500/10 text-left text-xs text-red-400 font-medium transition-colors border-t border-stone-800 pt-2"
-              >
-                <span className="flex items-center gap-2">
-                  <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
-                </span>
-                <ChevronRight className="w-4 h-4 text-red-400" />
-              </button>
-            </div>
-          </div>
-        )}
-      </main>
+                {shopInfo?.shop?.mobile && (
+                  <a
+                    href={`tel:${shopInfo.shop.mobile}`}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-800/60 text-left text-xs text-stone-300 font-medium transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-stone-500" />
+                      <span>Call Salon Contact</span>
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-stone-500" />
+                  </a>
+                )}
 
-      {/* ================= NATIVE MOBILE BOTTOM NAVIGATION BAR (FIXED FOOTER) ================= */}
-      <nav className="shrink-0 z-30 bg-[#16171f]/98 backdrop-blur-md border-t border-stone-800 text-stone-400 w-full flex items-center justify-around py-2.5 px-2 shadow-2xl">
-        {[
-          { id: 'home', label: 'Salon', icon: Store },
-          { id: 'book', label: 'Book', icon: Scissors },
-          { id: 'appointments', label: 'Bookings', icon: Calendar, badge: activeBookingsCount },
-          { id: 'profile', label: 'Profile', icon: User }
-        ].map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl relative transition-all ${isActive ? 'text-amber-400 font-bold scale-[1.05]' : 'hover:text-stone-200'
-                }`}
-            >
-              <div className="relative">
-                <Icon className={`w-5 h-5 mb-0.5 ${isActive ? 'stroke-[2.5]' : ''}`} />
-                {item.badge ? (
-                  <span className="absolute -top-1 -right-2 bg-amber-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
-                    {item.badge}
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutModal(true)}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-red-500/10 text-left text-xs text-red-400 font-medium transition-colors border-t border-stone-800 pt-2"
+                >
+                  <span className="flex items-center gap-2">
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
                   </span>
-                ) : null}
+                  <ChevronRight className="w-4 h-4 text-red-400" />
+                </button>
               </div>
-              <span className="text-[10px] tracking-tight">{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+            </div>
+          )}
+        </main>
 
-      {/* Close Smartphone Frame Container */}
+        {/* ================= NATIVE MOBILE BOTTOM NAVIGATION BAR (FIXED FOOTER) ================= */}
+        <nav className="shrink-0 z-30 bg-[#16171f]/98 backdrop-blur-md border-t border-stone-800 text-stone-400 w-full flex items-center justify-around py-2.5 px-2 shadow-2xl">
+          {[
+            { id: 'home', label: 'Salon', icon: Store },
+            { id: 'book', label: 'Book', icon: Scissors },
+            { id: 'appointments', label: 'Bookings', icon: Calendar, badge: activeBookingsCount },
+            { id: 'profile', label: 'Profile', icon: User }
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl relative transition-all ${isActive ? 'text-amber-400 font-bold scale-[1.05]' : 'hover:text-stone-200'
+                  }`}
+              >
+                <div className="relative">
+                  <Icon className={`w-5 h-5 mb-0.5 ${isActive ? 'stroke-[2.5]' : ''}`} />
+                  {item.badge ? (
+                    <span className="absolute -top-1 -right-2 bg-amber-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </div>
+                <span className="text-[10px] tracking-tight">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Close Smartphone Frame Container */}
       </div>
 
       {/* ================= CONFIRMATION MODALS & DRAWERS ================= */}
@@ -1772,13 +1772,12 @@ export default function Customer() {
                       setShowNotifDrawer(false);
                       setActiveTab('appointments');
                     }}
-                    className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${
-                      n.isUrgent || n.type === 'reminder'
+                    className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${n.isUrgent || n.type === 'reminder'
                         ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
                         : n.read
-                        ? 'bg-[#191a23] border-stone-800/80 hover:border-stone-700 opacity-80'
-                        : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
-                    }`}
+                          ? 'bg-[#191a23] border-stone-800/80 hover:border-stone-700 opacity-80'
+                          : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-1.5">
