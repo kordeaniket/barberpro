@@ -44,7 +44,10 @@ const crud = (path, Model, fields, filter = {}) => {
 };
 crud('/customers', Customer, ['name', 'mobile', 'email', 'dob', 'gender', 'notes'], { deleted: false });
 crud('/services', Service, ['name', 'description', 'price', 'duration', 'active']);
-r.get('/shop', wrap(async (req, res) => res.json({ shop: req.shop, customerLink: `${process.env.CLIENT_URL || 'http://localhost:5173'}/s/${req.shop.shopCode}` })));
+r.get('/shop', wrap(async (req, res) => {
+  const baseClientUrl = process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' ? 'https://frontend-rho-orpin-73.vercel.app' : 'http://localhost:5173');
+  res.json({ shop: req.shop, customerLink: `${baseClientUrl}/s/${req.shop.shopCode}` });
+}));
 r.get('/dashboard', wrap(async (req, res) => {
   const shopId = req.shopId;
   const d = today(); // "YYYY-MM-DD"

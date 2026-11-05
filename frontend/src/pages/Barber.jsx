@@ -61,7 +61,8 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  Activity
+  Activity,
+  ExternalLink
 } from 'lucide-react';
 
 const barberLinks = [
@@ -114,12 +115,34 @@ function Home() {
     if (refreshTrigger > 0) loadDashboard(period);
   }, [refreshTrigger]);
 
+  const clientPortalUrl = (() => {
+    const shopCode = info?.shop?.shopCode;
+    if (shopCode) {
+      if (typeof window !== 'undefined' && window.location?.origin && !window.location.origin.includes('localhost')) {
+        return `${window.location.origin}/s/${shopCode}`;
+      }
+      if (info?.customerLink && !info.customerLink.includes('localhost')) {
+        return info.customerLink;
+      }
+      return `https://frontend-rho-orpin-73.vercel.app/s/${shopCode}`;
+    }
+    return info?.customerLink || 'https://frontend-rho-orpin-73.vercel.app/s';
+  })();
+
   const copyLink = () => {
-    if (info?.customerLink) {
-      navigator.clipboard.writeText(info.customerLink);
+    if (clientPortalUrl) {
+      navigator.clipboard.writeText(clientPortalUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     }
+  };
+
+  const shareOnWhatsApp = () => {
+    if (!clientPortalUrl) return;
+    const shopName = info?.shop?.name || 'our Salon';
+    const text = `💈 *${shopName}* Online Booking\n\nBook your haircut & grooming appointment online 24/7 in seconds! ✂️\n\n👇 Click the link to view services & book your slot:\n${clientPortalUrl}`;
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
 
   const s = dash?.summary || {};
@@ -405,27 +428,76 @@ function Home() {
         </div>
       </div>
 
-      {/* Customer Booking Link Banner */}
-      {info?.customerLink && (
-        <div className="card border-amber-200/80 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 space-y-2.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Share2 className="w-4 h-4 text-amber-600" />
-                <h3 className="font-bold text-stone-900 text-sm">Client Booking Portal</h3>
+      {/* Customer Booking Link Banner with Vercel Link & Direct WhatsApp Share */}
+      <div className="card border-amber-200/90 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 space-y-3 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="p-1.5 rounded-lg bg-amber-100 text-amber-700">
+                <Share2 className="w-4 h-4" />
               </div>
-              <p className="text-[11px] text-stone-500">Share this link for 24/7 online booking</p>
+              <h3 className="font-bold text-stone-900 text-sm sm:text-base">Client Booking Portal</h3>
+              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Live on Vercel
+              </span>
             </div>
-            <button onClick={copyLink} className="btn-brand self-start sm:self-auto shrink-0 text-xs py-2 px-3.5">
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-            </button>
+            <p className="text-xs text-stone-500">
+              Share your direct store link on WhatsApp so clients can view your services, select stylists, and book appointments 24/7.
+            </p>
           </div>
-          <div className="bg-white/80 border border-stone-200 rounded-xl px-3 py-1.5 text-xs font-mono text-stone-700 break-all select-all">
-            {info.customerLink}
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Direct Share on WhatsApp Button */}
+            <button
+              onClick={shareOnWhatsApp}
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs font-semibold shadow-sm shadow-emerald-600/30 transition-all shrink-0"
+              title="Share link directly to WhatsApp"
+            >
+              <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+              </svg>
+              <span>Share on WhatsApp</span>
+            </button>
+
+            {/* Copy Link Button */}
+            <button
+              onClick={copyLink}
+              type="button"
+              className="btn-brand text-xs py-2 px-3.5 shrink-0"
+              title="Copy link to clipboard"
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              <span>{copied ? 'Copied Link!' : 'Copy Link'}</span>
+            </button>
+
+            {/* Open Portal Link in New Tab */}
+            {clientPortalUrl && (
+              <a
+                href={clientPortalUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-o text-xs py-2 px-3 shrink-0 text-stone-700 hover:text-stone-900"
+                title="Preview live portal in new tab"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Preview</span>
+              </a>
+            )}
           </div>
         </div>
-      )}
+
+        <div className="bg-white/90 border border-stone-200 rounded-xl px-3.5 py-2 text-xs font-mono text-stone-800 break-all select-all flex items-center justify-between gap-2 shadow-2xs">
+          <span className="truncate">{clientPortalUrl}</span>
+          <button
+            onClick={copyLink}
+            type="button"
+            className="text-[11px] text-amber-700 hover:text-amber-800 font-sans font-semibold shrink-0 underline"
+          >
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+      </div>
     </Shell>
   );
 }
