@@ -167,4 +167,81 @@ r.patch('/bookings/:id/cancel', wrap(async (req, res) => {
 
   res.json({ data: a, message: 'Booking cancelled' });
 }));
+
+r.get('/notifications', wrap(async (req, res) => {
+  const c = await Customer.findOne({ shopId: req.shopId, userId: req.user._id });
+  if (!c) return res.json([]);
+  const appointments = await Appointment.find({ shopId: req.shopId, customerId: c._id })
+    .sort('-createdAt')
+    .limit(30);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+
+  const notifs = [];
+
+  // 1. Check for 1-hour upcoming service reminders for today
+  appointments.forEach((a) => {
+    if (a.date === todayStr && ['pending', 'confirmed'].includes(a.status)) {
+      const diff = a.startMin - nowMin;
+      if (diff > 0 && diff <= 60) {
+        const sH = Math.floor(a.startMin / 60);
+        const sM = a.startMin % 60;
+        const timeStr = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`;
+        notifs.push({
+          id: `reminder-1h-${a._id}`,
+          appointmentId: a._id.toString(),
+          title: '⏰ 1-Hour Appointment Reminder',
+          serviceName: a.serviceName,
+          date: a.date,
+          startMin: a.startMin,
+          time: timeStr,
+          message: `Reminder: Your ${a.serviceName} appointment starts in ${diff} mins (${timeStr})! Please arrive on time.`,
+          type: 'reminder',
+          isUrgent: true,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+  });
+
+  // 2. Appointment status notifications
+  appointments.forEach((a) => {
+    const sH = Math.floor(a.startMin / 60);
+    const sM = a.startMin % 60;
+    const timeStr = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`;
+    let title = 'Booking Pending Confirmation';
+    let type = 'booking';
+    if (a.status === 'confirmed') {
+      title = '🎉 Booking Confirmed';
+      type = 'confirmed';
+    } else if (a.status === 'in_progress') {
+      title = '✂️ Service In Progress';
+      type = 'in_progress';
+    } else if (a.status === 'completed') {
+      title = '✅ Service Completed';
+      type = 'completed';
+    } else if (['cancelled', 'rejected', 'no_show'].includes(a.status)) {
+      title = '⚠️ Booking Cancelled';
+      type = 'cancellation';
+    }
+
+    notifs.push({
+      id: a._id.toString(),
+      appointmentId: a._id.toString(),
+      title,
+      serviceName: a.serviceName,
+      price: a.price,
+      date: a.date,
+      startMin: a.startMin,
+      time: timeStr,
+      status: a.status,
+      message: `${title}: ${a.serviceName} on ${a.date} at ${timeStr}`,
+      type,
+      timestamp: a.updatedAt || a.createdAt
+    });
+  });
+
+  res.json(notifs);
+}));
 module.exports = r;

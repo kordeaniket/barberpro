@@ -170,7 +170,31 @@ r.patch('/appointments/:id', wrap(async (req, res) => {
   const a = await Appointment.findOne({ _id: req.params.id, shopId: req.shopId }).populate('customerId');
   if (!a) return res.status(404).json({ message: 'Not found' });
   a.status = req.body.status; await a.save();
-  if (a.customerId.userId) emitUser(a.customerId.userId, 'booking:updated', { id: a._id, status: a.status });
+  if (a.customerId && a.customerId.userId) {
+    const sH = Math.floor(a.startMin / 60);
+    const sM = a.startMin % 60;
+    const timeFormatted = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`;
+    let notifTitle = `Booking ${a.status.replace('_', ' ').toUpperCase()}`;
+    if (a.status === 'confirmed') notifTitle = '🎉 Booking Confirmed!';
+    else if (a.status === 'in_progress') notifTitle = '✂️ Service In Progress';
+    else if (a.status === 'completed') notifTitle = '✅ Service Completed!';
+    else if (['cancelled', 'rejected'].includes(a.status)) notifTitle = '⚠️ Appointment Cancelled';
+
+    emitUser(a.customerId.userId, 'booking:updated', {
+      id: a._id.toString(),
+      appointmentId: a._id.toString(),
+      status: a.status,
+      title: notifTitle,
+      serviceName: a.serviceName,
+      date: a.date,
+      startMin: a.startMin,
+      time: timeFormatted,
+      price: a.price,
+      message: `Your appointment for ${a.serviceName} on ${a.date} at ${timeFormatted} is now ${a.status.replace('_', ' ')}.`,
+      type: a.status,
+      timestamp: new Date().toISOString()
+    });
+  }
   if (a.status === 'confirmed') sendWhatsApp(a.customerId.mobile, `Your booking at ${req.shop.name} on ${a.date} is confirmed.`);
   res.json({ data: a, message: 'Status: ' + a.status });
 }));

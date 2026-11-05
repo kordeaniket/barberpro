@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import api, { saveSession, clearSession } from '../api';
 import { fmt } from '../components/Shell';
 import ConfirmModal from '../components/Modal';
@@ -35,8 +36,29 @@ import {
   CalendarDays,
   History,
   Timer,
-  ArrowUpRight
+  ArrowUpRight,
+  Bell,
+  BellRing,
+  Trash2,
+  CheckCheck
 } from 'lucide-react';
+
+function playNotificationChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch {}
+}
 
 const msgOf = (e) => e.response?.data?.message || e.message;
 
@@ -312,7 +334,60 @@ export default function Customer() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
 
+  // Customer Notifications State
+  const [customerNotifs, setCustomerNotifs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('customer_notifications') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [showNotifDrawer, setShowNotifDrawer] = useState(false);
+  const [toastNotif, setToastNotif] = useState(null);
+
   const loadBookings = () => api.get('/customer/bookings').then((r) => setBk(r.data || []));
+
+  const loadNotifications = () => {
+    api
+      .get('/customer/notifications')
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setCustomerNotifs((prev) => {
+            const readMap = new Map(prev.map((n) => [n.id, n.read]));
+            const merged = res.data.map((n) => ({
+              ...n,
+              read: readMap.has(n.id) ? readMap.get(n.id) : false
+            }));
+            localStorage.setItem('customer_notifications', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+  };
+
+  const markNotifRead = (id) => {
+    setCustomerNotifs((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+      localStorage.setItem('customer_notifications', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const markAllNotifsAsRead = () => {
+    setCustomerNotifs((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      localStorage.setItem('customer_notifications', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const clearAllNotifs = () => {
+    setCustomerNotifs([]);
+    localStorage.removeItem('customer_notifications');
+  };
+
+  const unreadCount = customerNotifs.filter((n) => !n.read).length;
 
   const loadProfile = () => {
     api.get('/customer/profile').then((r) => {
@@ -334,6 +409,29 @@ export default function Customer() {
   useEffect(() => {
     loadBookings();
     loadProfile();
+    loadNotifications();
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const socket = io({ auth: { token } });
+
+    socket.on('booking:updated', (data) => {
+      playNotificationChime();
+      loadBookings();
+      loadNotifications();
+      setToastNotif(data);
+      setTimeout(() => setToastNotif(null), 6000);
+    });
+
+    socket.on('appointment:reminder', (data) => {
+      playNotificationChime();
+      loadNotifications();
+      setToastNotif(data);
+      setTimeout(() => setToastNotif(null), 6000);
+    });
+
+    return () => socket.close();
   }, []);
 
   useEffect(() => {
@@ -563,6 +661,55 @@ export default function Customer() {
 
   const activeBookingsCount = bk.filter((b) => ['pending', 'confirmed'].includes(b.status)).length;
 
+  // ⏰ 1-Hour Service Reminder Calculation
+  const oneHourReminder = (() => {
+    if (!bk.length) return null;
+    const today = new Date().toISOString().slice(0, 10);
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+
+    const upcomingSoon = bk.find((b) => {
+      if (b.date !== today) return false;
+      if (!['pending', 'confirmed'].includes(b.status)) return false;
+      const diff = b.startMin - nowMin;
+      return diff > 0 && diff <= 60;
+    });
+
+    if (!upcomingSoon) return null;
+    const diff = upcomingSoon.startMin - nowMin;
+    return {
+      booking: upcomingSoon,
+      minutesLeft: diff,
+      text: diff === 1 ? '1 min' : `${diff} mins`,
+      formattedTime: fmt(upcomingSoon.startMin)
+    };
+  })();
+
+  // Sync 1-hour reminder into notifications list
+  useEffect(() => {
+    if (oneHourReminder) {
+      const reminderId = `reminder-1h-${oneHourReminder.booking._id}`;
+      setCustomerNotifs((prev) => {
+        if (prev.some((n) => n.id === reminderId)) return prev;
+        const newReminder = {
+          id: reminderId,
+          appointmentId: oneHourReminder.booking._id,
+          title: '⏰ 1-Hour Service Reminder',
+          message: `Your appointment for ${oneHourReminder.booking.serviceName} starts in ${oneHourReminder.text} (${oneHourReminder.formattedTime})! Please arrive on time.`,
+          serviceName: oneHourReminder.booking.serviceName,
+          date: oneHourReminder.booking.date,
+          time: oneHourReminder.formattedTime,
+          type: 'reminder',
+          isUrgent: true,
+          read: false,
+          timestamp: new Date().toISOString()
+        };
+        const updated = [newReminder, ...prev];
+        localStorage.setItem('customer_notifications', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [oneHourReminder?.booking?._id, oneHourReminder?.minutesLeft]);
+
   return (
     <div className="h-screen w-full bg-[#0a0b0e] text-stone-100 font-sans selection:bg-amber-500/30 selection:text-amber-200 flex justify-center items-center sm:p-4 overflow-hidden">
       {/* Smartphone Frame Container */}
@@ -601,11 +748,28 @@ export default function Customer() {
             </div>
           </div>
 
-          {/* User actions & sign out */}
-          <div className="flex items-center gap-1.5">
+          {/* User actions: Notification Bell & Sign out */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowNotifDrawer(true)}
+              className="p-2 rounded-xl text-stone-300 hover:text-white hover:bg-stone-800/80 transition-all relative"
+              title="Notifications & Reminders"
+            >
+              {unreadCount > 0 ? (
+                <BellRing className="w-4 h-4 text-amber-400 animate-pulse" />
+              ) : (
+                <Bell className="w-4 h-4" />
+              )}
+              {unreadCount > 0 && (
+                <span className="absolute 0 top-1 right-1 bg-amber-500 text-stone-950 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center shadow-md">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => setShowLogoutModal(true)}
-              className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800/80 transition-colors"
+              className="p-2 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800/80 transition-colors"
               title="Sign out"
             >
               <LogOut className="w-4 h-4" />
@@ -615,6 +779,36 @@ export default function Customer() {
 
         {/* 2. SCROLLABLE MIDDLE VIEWPORT */}
         <main className="w-full p-4 space-y-4 flex-1 overflow-y-auto overscroll-contain">
+          {/* ⏰ 1-HOUR APPOINTMENT REMINDER BANNER */}
+          {oneHourReminder && (
+            <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border border-amber-500/40 rounded-2xl p-3.5 shadow-lg flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-stone-950 flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+                  <Timer className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full">
+                      Starts in {oneHourReminder.text}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-white text-xs sm:text-sm truncate mt-0.5">
+                    {oneHourReminder.booking.serviceName}
+                  </h4>
+                  <p className="text-[11px] text-stone-400">
+                    Scheduled today at {oneHourReminder.formattedTime} • Please arrive on time
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('appointments')}
+                className="px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] shrink-0 transition-colors shadow-sm"
+              >
+                View
+              </button>
+            </div>
+          )}
           {/* ================= TAB 1: HOME / SALON OVERVIEW ================= */}
           {activeTab === 'home' && (
             <div className="space-y-4 animate-in fade-in duration-200">
@@ -1449,7 +1643,134 @@ export default function Customer() {
       {/* Close Smartphone Frame Container */}
       </div>
 
-      {/* ================= CONFIRMATION MODALS ================= */}
+      {/* ================= CONFIRMATION MODALS & DRAWERS ================= */}
+
+      {/* 🔔 Customer Notification Center Drawer */}
+      {showNotifDrawer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/80 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-sm bg-[#161722] border border-stone-800 rounded-3xl shadow-2xl p-4 space-y-3.5 max-h-[85vh] flex flex-col animate-in zoom-in-95">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-stone-800 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <Bell className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-white text-sm">Notifications</h3>
+                {unreadCount > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    {unreadCount} new
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowNotifDrawer(false)}
+                className="p-1 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Actions: Mark read / Clear */}
+            {customerNotifs.length > 0 && (
+              <div className="flex items-center justify-between text-[11px] text-stone-400 px-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={markAllNotifsAsRead}
+                  className="hover:text-amber-400 flex items-center gap-1 transition-colors"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  <span>Mark all read</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={clearAllNotifs}
+                  className="hover:text-red-400 flex items-center gap-1 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear all</span>
+                </button>
+              </div>
+            )}
+
+            {/* Notification List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[140px] max-h-[360px]">
+              {customerNotifs.length === 0 ? (
+                <div className="text-center py-10 text-stone-500 space-y-2">
+                  <Bell className="w-8 h-8 text-stone-700 mx-auto" />
+                  <p className="text-xs font-semibold text-stone-400">No notifications yet</p>
+                  <p className="text-[11px] text-stone-500 max-w-xs mx-auto">
+                    You'll receive 1-hour service reminders and appointment updates here.
+                  </p>
+                </div>
+              ) : (
+                customerNotifs.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => {
+                      markNotifRead(n.id);
+                      setShowNotifDrawer(false);
+                      setActiveTab('appointments');
+                    }}
+                    className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${
+                      n.isUrgent || n.type === 'reminder'
+                        ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
+                        : n.read
+                        ? 'bg-[#191a23] border-stone-800/80 hover:border-stone-700 opacity-80'
+                        : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {n.type === 'reminder' ? (
+                          <Timer className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+                        ) : n.type === 'confirmed' ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        ) : (
+                          <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                        )}
+                        <h4 className="font-bold text-xs text-white leading-tight">
+                          {n.title}
+                        </h4>
+                      </div>
+                      {!n.read && (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 mt-0.5" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-stone-300 mt-1 leading-snug">
+                      {n.message}
+                    </p>
+                    <div className="flex items-center justify-between text-[10px] text-stone-500 mt-2 pt-1 border-t border-stone-800/60">
+                      <span>{n.time ? `At ${n.time}` : ''}</span>
+                      <span className="text-amber-400/80 font-medium">Tap to view →</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚀 Real-time Popup Toast for Customer */}
+      {toastNotif && (
+        <div className="fixed top-4 inset-x-4 max-w-sm mx-auto z-50 bg-[#1e202c] border border-amber-500/60 text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-between gap-3 animate-in slide-in-from-top-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+              <BellRing className="w-4 h-4 animate-bounce" />
+            </div>
+            <div className="min-w-0">
+              <h4 className="font-bold text-xs text-amber-400 truncate">{toastNotif.title || 'New Notification'}</h4>
+              <p className="text-[11px] text-stone-300 truncate">{toastNotif.message}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setToastNotif(null)}
+            className="p-1 rounded-lg text-stone-400 hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* 1. Review & Confirm Booking Modal */}
       <ConfirmModal
