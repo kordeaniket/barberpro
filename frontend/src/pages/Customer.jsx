@@ -43,7 +43,8 @@ import {
   CheckCheck,
   ChevronLeft,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  LogOutIcon
 } from 'lucide-react';
 
 function playNotificationChime() {
@@ -1781,31 +1782,50 @@ export default function Customer() {
             { id: 'home', label: 'Salon', icon: Store },
             { id: 'book', label: 'Book', icon: Scissors },
             { id: 'appointments', label: 'Bookings', icon: Calendar, badge: activeBookingsCount },
-            { id: 'profile', label: 'Profile', icon: User }
+            { id: 'profile', label: 'Profile', icon: User },
+            {
+              id: 'logout',
+              label: 'Logout',
+              icon: LogOutIcon,
+              onClick: () => setShowLogoutModal(true)
+            }
           ].map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl relative transition-all ${isActive ? 'text-amber-400 font-bold scale-[1.05]' : 'hover:text-stone-200'
+                type="button"
+                onClick={() => {
+                  if (item.onClick) {
+                    item.onClick();
+                  } else {
+                    setActiveTab(item.id);
+                  }
+                }}
+                className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl relative transition-all ${isActive
+                  ? 'text-amber-400 font-bold scale-[1.05]'
+                  : 'hover:text-stone-200'
                   }`}
               >
                 <div className="relative">
                   <Icon className={`w-5 h-5 mb-0.5 ${isActive ? 'stroke-[2.5]' : ''}`} />
-                  {item.badge ? (
+
+                  {item.badge > 0 && (
                     <span className="absolute -top-1 -right-2 bg-amber-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
                       {item.badge}
                     </span>
-                  ) : null}
+                  )}
                 </div>
-                <span className="text-[10px] tracking-tight">{item.label}</span>
+
+                <span className="text-[10px] tracking-tight">
+                  {item.label}
+                </span>
               </button>
             );
           })}
         </nav>
-
         {/* Close Smartphone Frame Container */}
       </div>
 
@@ -1852,8 +1872,8 @@ export default function Customer() {
                 type="button"
                 onClick={() => setCustomerNotifTab('unread')}
                 className={`flex-1 py-1.5 px-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs ${customerNotifTab === 'unread'
-                    ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-xs'
-                    : 'text-stone-400 hover:text-white'
+                  ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-xs'
+                  : 'text-stone-400 hover:text-white'
                   }`}
               >
                 <span>Latest (Unread)</span>
@@ -1867,8 +1887,8 @@ export default function Customer() {
                 type="button"
                 onClick={() => setCustomerNotifTab('all')}
                 className={`flex-1 py-1.5 px-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs ${customerNotifTab === 'all'
-                    ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-xs'
-                    : 'text-stone-400 hover:text-white'
+                  ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-xs'
+                  : 'text-stone-400 hover:text-white'
                   }`}
               >
                 <span>Daily All</span>
@@ -1928,8 +1948,8 @@ export default function Customer() {
                           setActiveTab('appointments');
                         }}
                         className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${n.isUrgent || n.type === 'reminder'
-                            ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
-                            : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
+                          ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
+                          : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
                           }`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -2000,10 +2020,10 @@ export default function Customer() {
                               setActiveTab('appointments');
                             }}
                             className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${n.isUrgent || n.type === 'reminder'
-                                ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
-                                : n.read
-                                  ? 'bg-[#191a23] border-stone-800/80 hover:border-stone-700 opacity-80'
-                                  : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
+                              ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
+                              : n.read
+                                ? 'bg-[#191a23] border-stone-800/80 hover:border-stone-700 opacity-80'
+                                : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
                               }`}
                           >
                             <div className="flex items-start justify-between gap-2">
