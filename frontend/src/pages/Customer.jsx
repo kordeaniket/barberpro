@@ -662,92 +662,46 @@ export default function Customer() {
 
         {/* ================= TAB 2: BOOKING FLOW ================= */}
         {activeTab === 'book' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Step 1: Multi-Service Selection */}
-            <div className="card p-4 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center">
-                    1
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-stone-900 text-sm">Choose Services</h3>
-                    <p className="text-[11px] text-stone-500">Multi-select any combination of services</p>
-                  </div>
-                </div>
+          <div className="space-y-2.5 animate-in fade-in duration-200">
+            {/* Step 1: Services — compact single-row items */}
+            <div className="card p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-stone-800 text-xs flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                  Services
+                </h3>
                 {selectedServices.length > 0 && (
-                  <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
-                    {selectedServices.length} selected (₹{totalPrice})
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                    {selectedServices.length} sel · ₹{totalPrice} · {totalDuration}m
                   </span>
                 )}
               </div>
 
-              {/* Service Selection Summary Pill Strip */}
+              {/* Selected pills */}
               {selectedServices.length > 0 && (
-                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-amber-900 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Selected Services ({selectedServices.length})</span>
+                <div className="flex flex-wrap gap-1 items-center">
+                  {selectedServices.map((s) => (
+                    <span key={s._id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-[10px] font-medium text-stone-700">
+                      {s.name} <span className="text-amber-600 font-bold">₹{s.price}</span>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); toggleService(s); }} className="text-stone-400 hover:text-red-500">
+                        <X className="w-3 h-3" />
+                      </button>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedServices([])}
-                      className="text-[11px] text-amber-700 hover:text-amber-900 font-semibold underline"
-                    >
-                      Clear All
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedServices.map((s) => (
-                      <span
-                        key={s._id}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-amber-200 text-stone-800 text-xs font-medium shadow-sm"
-                      >
-                        <span>{s.name}</span>
-                        <span className="text-[10px] text-amber-700 font-bold">₹{s.price} ({s.duration}m)</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleService(s);
-                          }}
-                          className="text-stone-400 hover:text-red-500 ml-0.5"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1.5 border-t border-amber-200/60 text-xs">
-                    <span className="text-amber-900 font-semibold flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-amber-700" />
-                      <span>
-                        Approx Time: <strong className="text-stone-900">{totalDuration >= 60 ? `${Math.floor(totalDuration / 60)}h ${totalDuration % 60 ? `${totalDuration % 60}m` : ''}` : `${totalDuration} mins`}</strong>
-                      </span>
-                    </span>
-                    <span className="text-amber-950 font-extrabold text-sm">
-                      Total: ₹{totalPrice}
-                    </span>
-                  </div>
+                  ))}
+                  <button type="button" onClick={() => setSelectedServices([])} className="text-[10px] text-amber-700 hover:text-amber-900 font-semibold underline ml-1">Clear</button>
                 </div>
               )}
 
-              {/* Service Search Bar */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search haircut, trim, beard, spa..."
-                  className="inp pl-9 py-2 text-xs"
-                  value={searchSvc}
-                  onChange={(e) => setSearchSvc(e.target.value)}
-                />
-              </div>
+              {/* Search */}
+              {svcs.length > 5 && (
+                <div className="relative">
+                  <Search className="w-3 h-3 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input type="text" placeholder="Search services..." className="inp pl-7 py-1.5 text-[11px]" value={searchSvc} onChange={(e) => setSearchSvc(e.target.value)} />
+                </div>
+              )}
 
-              <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1">
+              {/* Service list — single row per item */}
+              <div className="space-y-1 max-h-44 overflow-y-auto">
                 {filteredServices.map((s) => {
                   const isSelected = selectedServices.some((x) => x._id === s._id);
                   return (
@@ -755,59 +709,29 @@ export default function Customer() {
                       key={s._id}
                       type="button"
                       onClick={() => toggleService(s)}
-                      className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 ${isSelected
-                        ? 'border-amber-600 bg-amber-50/70 ring-2 ring-amber-600/30 shadow-sm'
-                        : 'border-stone-200 bg-white hover:border-stone-300'
-                        }`}
+                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all ${isSelected
+                        ? 'border-amber-500 bg-amber-50/80 ring-1 ring-amber-500/30'
+                        : 'border-stone-150 bg-white hover:border-stone-300'}`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${isSelected
-                              ? 'bg-amber-600 border-amber-600 text-white'
-                              : 'border-stone-300 bg-stone-50'
-                            }`}
-                        >
-                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                        </div>
-                        <div>
-                          <span className="font-bold text-xs sm:text-sm text-stone-900 block leading-tight">
-                            {s.name}
-                          </span>
-                          <span className="text-[11px] text-stone-500 block mt-0.5">
-                            ⏱️ {s.duration} mins • {s.description || 'Professional grooming'}
-                          </span>
-                        </div>
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-stone-300 bg-stone-50'}`}>
+                        {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="font-extrabold text-amber-700 text-sm block">₹{s.price}</span>
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${isSelected
-                              ? 'bg-amber-600 text-white'
-                              : 'bg-stone-100 text-stone-500'
-                            }`}
-                        >
-                          {isSelected ? 'Selected' : '+ Add'}
-                        </span>
-                      </div>
+                      <span className="text-[11px] font-semibold text-stone-800 flex-1 truncate">{s.name}</span>
+                      <span className="text-[10px] text-stone-400 shrink-0">{s.duration}m</span>
+                      <span className="text-[11px] font-bold text-amber-700 shrink-0">₹{s.price}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Step 2: Date Picker (Horizontal Day Strip) */}
-            <div className="card p-4 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center">
-                    2
-                  </div>
-                  <h3 className="font-bold text-stone-900 text-sm">Choose Date</h3>
-                </div>
-                <span className="text-xs font-medium text-stone-500">{selectedDate}</span>
-              </div>
-
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+            {/* Step 2: Date — compact horizontal strip */}
+            <div className="card p-3 space-y-2">
+              <h3 className="font-semibold text-stone-800 text-xs flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                Date
+              </h3>
+              <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
                 {upcomingDays.map((d) => {
                   const isSelected = selectedDate === d.dateStr;
                   return (
@@ -815,76 +739,60 @@ export default function Customer() {
                       key={d.dateStr}
                       type="button"
                       onClick={() => setSelectedDate(d.dateStr)}
-                      className={`min-w-[62px] py-2.5 px-2 rounded-2xl border text-center transition-all shrink-0 ${isSelected
-                        ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/25 font-bold scale-[1.02]'
-                        : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
-                        }`}
+                      className={`min-w-[52px] py-1.5 px-1.5 rounded-xl border text-center transition-all shrink-0 ${isSelected
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm font-bold'
+                        : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300'}`}
                     >
-                      <span className="text-[10px] uppercase font-bold block opacity-80">{d.dayName}</span>
-                      <span className="text-base font-extrabold block my-0.5">{d.dayNumber}</span>
-                      <span className="text-[10px] block opacity-80">{d.month}</span>
+                      <span className="text-[9px] uppercase font-bold block opacity-80">{d.dayName}</span>
+                      <span className="text-sm font-extrabold block">{d.dayNumber}</span>
+                      <span className="text-[9px] block opacity-70">{d.month}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Step 3: Time Slot Picker Grouped by Time of Day */}
-            <div className="card p-4 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center">
-                    3
-                  </div>
-                  <h3 className="font-bold text-stone-900 text-sm">Choose Time Slot</h3>
-                </div>
+            {/* Step 3: Time Slots — compact grid */}
+            <div className="card p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-stone-800 text-xs flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">3</span>
+                  Time
+                </h3>
                 {selectedSlot && (
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                    {fmt(selectedSlot.startMin)} – {fmt(selectedSlot.startMin + totalDuration)} ({totalDuration}m)
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                    {fmt(selectedSlot.startMin)} – {fmt(selectedSlot.startMin + totalDuration)}
                   </span>
                 )}
               </div>
 
               {selectedServices.length === 0 ? (
-                <div className="p-6 text-center text-xs text-stone-400 space-y-1">
-                  <Scissors className="w-6 h-6 mx-auto opacity-40" />
-                  <p>Please select at least one service above to view available slots</p>
-                </div>
+                <p className="text-[11px] text-stone-400 text-center py-3">Select a service first</p>
               ) : slotsLoading ? (
-                <div className="p-6 text-center text-xs text-stone-400">Loading available slots for {totalDuration} min service...</div>
+                <p className="text-[11px] text-stone-400 text-center py-3">Loading slots...</p>
               ) : slots.length === 0 ? (
-                <div className="p-6 text-center text-xs text-stone-500 bg-stone-50 rounded-xl space-y-1">
-                  <Clock className="w-6 h-6 text-stone-300 mx-auto" />
-                  <p className="font-semibold text-stone-700">No continuous {totalDuration}-minute slots available for this date</p>
-                  <p className="text-[11px] text-stone-400">
-                    The salon may be fully booked or closed. Try picking another date.
-                  </p>
+                <div className="text-center py-3 text-[11px] text-stone-500">
+                  <p className="font-semibold">No {totalDuration}-min slots available</p>
+                  <p className="text-[10px] text-stone-400">Try another date</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {/* Morning Section */}
+                <div className="space-y-2">
                   {morningSlots.length > 0 && (
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Sun className="w-3.5 h-3.5 text-amber-500" />
-                        <span>Morning (Before 12 PM)</span>
+                    <div>
+                      <span className="text-[10px] font-semibold text-stone-400 uppercase flex items-center gap-1 mb-1">
+                        <Sun className="w-3 h-3 text-amber-500" /> Morning
                       </span>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
                         {morningSlots.map((s) => {
                           const isPicked = selectedSlot?.startMin === s.startMin;
                           const disabled = isSlotDisabled(s);
                           return (
-                            <button
-                              key={s.startMin}
-                              disabled={disabled}
-                              onClick={() => setSelectedSlot(s)}
-                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${disabled
-                                ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed opacity-50'
+                            <button key={s.startMin} disabled={disabled} onClick={() => setSelectedSlot(s)}
+                              className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${disabled
+                                ? 'bg-stone-50 text-stone-300 line-through cursor-not-allowed opacity-50 border border-stone-100'
                                 : isPicked
-                                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
-                                  : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
-                                }`}
-                            >
+                                  ? 'bg-amber-600 text-white shadow-sm border border-amber-600'
+                                  : 'bg-white border border-stone-200 text-stone-700 hover:border-amber-400'}`}>
                               {fmt(s.startMin)}
                             </button>
                           );
@@ -892,30 +800,22 @@ export default function Customer() {
                       </div>
                     </div>
                   )}
-
-                  {/* Afternoon Section */}
                   {afternoonSlots.length > 0 && (
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Sunset className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Afternoon (12 PM - 5 PM)</span>
+                    <div>
+                      <span className="text-[10px] font-semibold text-stone-400 uppercase flex items-center gap-1 mb-1">
+                        <Sunset className="w-3 h-3 text-amber-600" /> Afternoon
                       </span>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
                         {afternoonSlots.map((s) => {
                           const isPicked = selectedSlot?.startMin === s.startMin;
                           const disabled = isSlotDisabled(s);
                           return (
-                            <button
-                              key={s.startMin}
-                              disabled={disabled}
-                              onClick={() => setSelectedSlot(s)}
-                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${disabled
-                                ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed opacity-50'
+                            <button key={s.startMin} disabled={disabled} onClick={() => setSelectedSlot(s)}
+                              className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${disabled
+                                ? 'bg-stone-50 text-stone-300 line-through cursor-not-allowed opacity-50 border border-stone-100'
                                 : isPicked
-                                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
-                                  : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
-                                }`}
-                            >
+                                  ? 'bg-amber-600 text-white shadow-sm border border-amber-600'
+                                  : 'bg-white border border-stone-200 text-stone-700 hover:border-amber-400'}`}>
                               {fmt(s.startMin)}
                             </button>
                           );
@@ -923,30 +823,22 @@ export default function Customer() {
                       </div>
                     </div>
                   )}
-
-                  {/* Evening Section */}
                   {eveningSlots.length > 0 && (
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Moon className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>Evening (5 PM Onwards)</span>
+                    <div>
+                      <span className="text-[10px] font-semibold text-stone-400 uppercase flex items-center gap-1 mb-1">
+                        <Moon className="w-3 h-3 text-indigo-400" /> Evening
                       </span>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
                         {eveningSlots.map((s) => {
                           const isPicked = selectedSlot?.startMin === s.startMin;
                           const disabled = isSlotDisabled(s);
                           return (
-                            <button
-                              key={s.startMin}
-                              disabled={disabled}
-                              onClick={() => setSelectedSlot(s)}
-                              className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all ${disabled
-                                ? 'bg-stone-50 border border-stone-100 text-stone-300 line-through cursor-not-allowed opacity-50'
+                            <button key={s.startMin} disabled={disabled} onClick={() => setSelectedSlot(s)}
+                              className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${disabled
+                                ? 'bg-stone-50 text-stone-300 line-through cursor-not-allowed opacity-50 border border-stone-100'
                                 : isPicked
-                                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02] border-amber-600'
-                                  : 'bg-white border border-stone-200 text-stone-800 hover:border-amber-400'
-                                }`}
-                            >
+                                  ? 'bg-amber-600 text-white shadow-sm border border-amber-600'
+                                  : 'bg-white border border-stone-200 text-stone-700 hover:border-amber-400'}`}>
                               {fmt(s.startMin)}
                             </button>
                           );
@@ -958,35 +850,26 @@ export default function Customer() {
               )}
             </div>
 
-            {/* Bottom Booking Summary Card / Proceed Button */}
+            {/* Confirm bar */}
             {selectedServices.length > 0 && selectedSlot && (
-              <div className="card border-amber-300 bg-gradient-to-r from-amber-500/10 to-amber-500/5 p-4 space-y-3 animate-in slide-in-from-bottom-2 duration-150">
-                <div className="flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-bold text-stone-900 block text-sm">
-                      {selectedServices.map((s) => s.name).join(' + ')}
-                    </span>
-                    <span className="text-stone-500">
-                      {selectedDate} at {fmt(selectedSlot.startMin)} – {fmt(selectedSlot.startMin + totalDuration)} ({totalDuration} mins approx)
-                    </span>
+              <div className="card border-amber-300 bg-amber-50/50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px]">
+                    <span className="font-semibold text-stone-800 block">{selectedServices.map((s) => s.name).join(' + ')}</span>
+                    <span className="text-stone-500">{selectedDate} · {fmt(selectedSlot.startMin)}–{fmt(selectedSlot.startMin + totalDuration)} · {totalDuration}m</span>
                   </div>
-                  <span className="text-lg font-extrabold text-amber-800">₹{totalPrice}</span>
+                  <span className="text-base font-extrabold text-amber-800">₹{totalPrice}</span>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmBookingModal(true)}
-                  className="btn-brand w-full py-3 text-sm shadow-lg shadow-amber-600/25"
-                >
-                  <CalendarCheck className="w-4 h-4" />
-                  <span>Review & Confirm Booking</span>
+                <button type="button" onClick={() => setShowConfirmBookingModal(true)} className="btn-brand w-full py-2.5 text-xs shadow-md shadow-amber-600/20">
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  <span>Confirm Booking</span>
                 </button>
               </div>
             )}
 
             {bookingMsg && (
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
                 <span>{bookingMsg}</span>
               </div>
             )}
@@ -1039,57 +922,73 @@ export default function Customer() {
             ) : (
               <div className="space-y-3">
                 {filteredAppointments.map((b) => (
+
                   <div
                     key={b._id}
-                    className="card p-4 space-y-3 shadow-xs hover:border-amber-200 transition-all"
+                    className="card p-3 sm:p-4 shadow-xs hover:border-amber-200 transition-all"
                   >
-                    <div className="flex items-start justify-between gap-2 border-b border-stone-100 pb-2.5">
-                      <div>
-                        <span className="font-bold text-stone-900 text-sm sm:text-base block">
-                          {b.serviceName}
-                        </span>
-                        <span className="text-[11px] text-stone-500 flex items-center gap-1 mt-0.5">
-                          <Store className="w-3 h-3 text-stone-400" />
-                          <span>{shopInfo?.shop?.name || 'Salon'}</span>
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-extrabold text-amber-700 text-sm sm:text-base block">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+
+                      {/* Service Details */}
+                      <div className="flex items-center justify-between sm:justify-start sm:gap-5 min-w-0 flex-1">
+                        <div className="min-w-0">
+                          <span className="font-bold text-stone-900 text-sm sm:text-base block truncate">
+                            {b.serviceName}
+                          </span>
+
+                          <span className="text-[11px] text-stone-500 flex items-center gap-1 mt-0.5">
+                            <Store className="w-3 h-3 text-stone-400 shrink-0" />
+                            <span className="truncate">
+                              {shopInfo?.shop?.name || 'Salon'}
+                            </span>
+                          </span>
+                        </div>
+
+                        {/* Price - Mobile */}
+                        <span className="font-extrabold text-amber-700 text-sm sm:hidden shrink-0">
                           ₹{b.price}
                         </span>
+                      </div>
+
+                      {/* Booking Info */}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 flex-wrap">
+
+                        {/* Date */}
+                        <div className="flex flex-col items-start gap-1 text-xs text-stone-600 font-medium">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                            {b.date}
+                          </span>
+
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-stone-400" />
+                            {fmt(b.startMin)}
+                          </span>
+                        </div>
+
+                        {/* Price - Desktop */}
+                        <span className="hidden sm:block font-extrabold text-amber-700 text-sm min-w-[65px] text-right">
+                          ₹{b.price}
+                        </span>
+
+                        {/* Status */}
                         <StatusBadge status={b.status} />
+
+                        {/* Actions */}
+                        {['pending', 'confirmed'].includes(b.status) && (
+                          <button
+                            className="btn-danger text-xs py-1.5 px-3 whitespace-nowrap"
+                            onClick={() => setCancelBookingTarget(b)}
+                          >
+                            Cancel
+                          </button>
+                        )}
+
+
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-stone-600 flex-wrap gap-2">
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1 font-medium">
-                          <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                          <span>{b.date}</span>
-                        </span>
-                        <span className="flex items-center gap-1 font-medium">
-                          <Clock className="w-3.5 h-3.5 text-stone-400" />
-                          <span>{fmt(b.startMin)}</span>
-                        </span>
-                      </div>
-
-                      {['pending', 'confirmed'].includes(b.status) && (
-                        <button
-                          className="btn-danger text-xs py-1 px-3"
-                          onClick={() => setCancelBookingTarget(b)}
-                        >
-                          Cancel Booking
-                        </button>
-                      )}
-
-                      {b.status === 'completed' && (
-                        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>Earned +{Math.floor(b.price / 100)} pts</span>
-                        </span>
-                      )}
                     </div>
                   </div>
+
                 ))}
               </div>
             )}
