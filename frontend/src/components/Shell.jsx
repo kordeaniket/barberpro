@@ -22,7 +22,9 @@ import {
   Clock,
   Sparkles,
   CalendarCheck,
-  RefreshCw
+  RefreshCw,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 export const fmt = (m) => {
@@ -513,6 +515,41 @@ export default function Shell({ title, links, children, actions, subtitle }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarLogoFailed, setSidebarLogoFailed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Monitor fullscreen status
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    try {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        const el = document.documentElement;
+        if (el.requestFullscreen) {
+          el.requestFullscreen();
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn('Fullscreen toggle:', err);
+    }
+  };
 
   // Close mobile drawer when route changes
   useEffect(() => {
@@ -749,7 +786,17 @@ export default function Shell({ title, links, children, actions, subtitle }) {
             {displayTitle}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* Mobile Full Screen View Button */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 transition-colors"
+            title={isFullscreen ? 'Exit Full Screen' : 'Full Screen View'}
+            aria-label="Toggle full screen"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-amber-400" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           {isBarber && <NotificationMenu isMobile={true} />}
           <UserProfileMenu onLogout={() => setShowLogoutModal(true)} isMobile={true} />
           <button
@@ -824,7 +871,18 @@ export default function Shell({ title, links, children, actions, subtitle }) {
               })}
             </nav>
 
-            <div className="pt-4 border-t border-stone-800 space-y-3">
+            <div className="pt-4 border-t border-stone-800 space-y-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  toggleFullscreen();
+                  setMobileOpen(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold border border-stone-700 transition-colors"
+              >
+                {isFullscreen ? <Minimize2 className="w-4 h-4 text-amber-400" /> : <Maximize2 className="w-4 h-4" />}
+                <span>{isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen View'}</span>
+              </button>
               <div className="text-xs text-stone-400">
                 Logged in as <b className="text-white">{u?.name}</b>
               </div>

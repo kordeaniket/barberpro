@@ -554,7 +554,10 @@ function Appts() {
 
   // Walk-in / Manual Booking Form State (Modal)
   const [showAddForm, setShowAddForm] = useState(false);
+  const [clientMode, setClientMode] = useState('existing'); // 'existing' | 'new'
   const [walkInCustId, setWalkInCustId] = useState('');
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientMobile, setNewClientMobile] = useState('');
   const [walkInServiceIds, setWalkInServiceIds] = useState([]);
   const [walkInDate, setWalkInDate] = useState(new Date().toISOString().slice(0, 10));
   const [walkInStartMin, setWalkInStartMin] = useState(null);
@@ -774,9 +777,19 @@ function Appts() {
   // Add Walk-in / Manual Booking
   const handleAddWalkIn = async (e) => {
     e.preventDefault();
-    if (!walkInCustId) {
-      d(ui.actions.setMsg({ type: 'error', text: 'Please select a client' }));
+    if (clientMode === 'existing' && !walkInCustId) {
+      d(ui.actions.setMsg({ type: 'error', text: 'Please select an existing client' }));
       return;
+    }
+    if (clientMode === 'new') {
+      if (!newClientName.trim()) {
+        d(ui.actions.setMsg({ type: 'error', text: 'Client Name is mandatory' }));
+        return;
+      }
+      if (!newClientMobile.trim()) {
+        d(ui.actions.setMsg({ type: 'error', text: 'Client Mobile Number is mandatory' }));
+        return;
+      }
     }
     if (walkInServiceIds.length === 0) {
       d(ui.actions.setMsg({ type: 'error', text: 'Please select at least one service' }));
@@ -788,19 +801,32 @@ function Appts() {
     }
 
     try {
-      await api.post('/barber/appointments', {
-        customerId: walkInCustId,
+      const payload = {
         serviceIds: walkInServiceIds,
         serviceId: walkInServiceIds[0],
         date: walkInDate,
         startMin: walkInStartMin,
         staffName: walkInStaff || undefined
-      });
-      d(ui.actions.setMsg({ type: 'ok', text: 'Walk-in appointment scheduled successfully!' }));
+      };
+
+      if (clientMode === 'existing') {
+        payload.customerId = walkInCustId;
+      } else {
+        payload.clientName = newClientName.trim();
+        payload.clientMobile = newClientMobile.trim();
+      }
+
+      const res = await api.post('/barber/appointments', payload);
+      d(ui.actions.setMsg({ type: 'ok', text: res.data?.message || 'Walk-in appointment scheduled successfully!' }));
       setShowAddForm(false);
       setWalkInServiceIds([]);
       setWalkInCustId('');
+      setNewClientName('');
+      setNewClientMobile('');
+      setClientMode('existing');
       setWalkInStartMin(null);
+      // Immediately refresh customers so new client entry shows up everywhere
+      d(ui.actions.fetchRequest({ key: 'customers', url: '/barber/customers' }));
       refreshAll();
     } catch (err) {
       d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Booking conflict or error' }));
@@ -864,27 +890,110 @@ function Appts() {
             {/* Modal Form Body */}
             <form onSubmit={handleAddWalkIn} className="flex-1 overflow-y-auto p-5 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {/* Client selection */}
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-semibold text-stone-700 flex items-center justify-between">
-                    <span>Select Client <span className="text-red-500">*</span></span>
-                    <span className="text-[10px] text-stone-400 font-normal">
-                      Registered clients list ({custs.length})
+                {/* Client selection & New Client Entry */}
+                <div className="space-y-2 sm:col-span-2 bg-stone-50/70 p-3.5 rounded-2xl border border-stone-200/80">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Client Details <span className="text-red-500">*</span></span>
                     </span>
-                  </label>
-                  <select
-                    required
-                    className="inp"
-                    value={walkInCustId}
-                    onChange={(e) => setWalkInCustId(e.target.value)}
-                  >
-                    <option value="">-- Choose Client --</option>
-                    {custs.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name} ({c.mobile})
-                      </option>
-                    ))}
-                  </select>
+                    <div className="flex items-center bg-stone-200/80 p-0.5 rounded-xl text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setClientMode('existing')}
+                        className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                          clientMode === 'existing'
+                            ? 'bg-white text-stone-900 shadow-xs'
+                            : 'text-stone-600 hover:text-stone-900'
+                        }`}
+                      >
+                        Existing Client
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setClientMode('new')}
+                        className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                          clientMode === 'new'
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'text-stone-600 hover:text-stone-900'
+                        }`}
+                      >
+                        + New Client
+                      </button>
+                    </div>
+                  </div>
+
+                  {clientMode === 'existing' ? (
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center justify-between text-[11px] text-stone-500 pb-0.5">
+                        <span>Choose from registered clients ({custs.length})</span>
+                        <button
+                          type="button"
+                          onClick={() => setClientMode('new')}
+                          className="text-amber-700 hover:underline font-semibold"
+                        >
+                          + Enter New Client Instead
+                        </button>
+                      </div>
+                      <select
+                        required={clientMode === 'existing'}
+                        className="inp bg-white"
+                        value={walkInCustId}
+                        onChange={(e) => setWalkInCustId(e.target.value)}
+                      >
+                        <option value="">-- Choose Existing Client --</option>
+                        {custs.map((c) => (
+                          <option key={c._id} value={c._id}>
+                            {c.name} ({c.mobile})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pt-1 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between text-[11px] text-stone-500 pb-0.5">
+                        <span>Enter new client details (auto-saved to directory)</span>
+                        <button
+                          type="button"
+                          onClick={() => setClientMode('existing')}
+                          className="text-stone-500 hover:text-stone-800 font-medium"
+                        >
+                          Select Existing
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[11px] font-semibold text-stone-700 block mb-1">
+                            Client Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required={clientMode === 'new'}
+                            placeholder="e.g. Rahul Verma"
+                            className="inp bg-white"
+                            value={newClientName}
+                            onChange={(e) => setNewClientName(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-stone-700 block mb-1">
+                            Mobile Number <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            required={clientMode === 'new'}
+                            placeholder="e.g. 9876543210"
+                            className="inp bg-white"
+                            value={newClientMobile}
+                            onChange={(e) => setNewClientMobile(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md font-medium">
+                        ✓ If this mobile number is not in directory, a new client entry will be created automatically.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Date */}
@@ -1024,7 +1133,12 @@ function Appts() {
                   </button>
                   <button
                     type="submit"
-                    disabled={!walkInCustId || walkInServiceIds.length === 0 || walkInStartMin === null}
+                    disabled={
+                      (clientMode === 'existing' && !walkInCustId) ||
+                      (clientMode === 'new' && (!newClientName.trim() || !newClientMobile.trim())) ||
+                      walkInServiceIds.length === 0 ||
+                      walkInStartMin === null
+                    }
                     className="btn-brand disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>Confirm Booking (₹{walkInTotalPrice})</span>

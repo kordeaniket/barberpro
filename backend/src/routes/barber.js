@@ -336,7 +336,36 @@ r.get('/appointments', wrap(async (req, res) => {
 }));
 
 r.post('/appointments', wrap(async (req, res) => {
-  need(req.body, ['customerId', 'date', 'startMin']);
+  need(req.body, ['date', 'startMin']);
+
+  // Resolve existing or create new Customer
+  let cust;
+  if (req.body.customerId) {
+    cust = await Customer.findOne({ _id: req.body.customerId, shopId: req.shopId });
+  } else if (req.body.clientName && req.body.clientMobile) {
+    const mobile = String(req.body.clientMobile).trim();
+    const name = String(req.body.clientName).trim();
+    cust = await Customer.findOne({ mobile, shopId: req.shopId });
+    if (cust) {
+      if (cust.deleted) cust.deleted = false;
+      cust.name = name;
+      if (req.body.clientEmail) cust.email = String(req.body.clientEmail).trim();
+      await cust.save();
+    } else {
+      cust = await Customer.create({
+        shopId: req.shopId,
+        name,
+        mobile,
+        email: req.body.clientEmail ? String(req.body.clientEmail).trim() : undefined,
+        notes: req.body.clientNotes ? String(req.body.clientNotes).trim() : undefined
+      });
+    }
+  } else {
+    return res.status(400).json({ message: 'Customer selection or Client Name & Mobile is required' });
+  }
+
+  if (!cust) return res.status(404).json({ message: 'Customer not found or could not be created' });
+
   let svcIds = [];
   if (Array.isArray(req.body.serviceIds) && req.body.serviceIds.length) {
     svcIds = req.body.serviceIds;
@@ -348,11 +377,8 @@ r.post('/appointments', wrap(async (req, res) => {
     return res.status(400).json({ message: 'Select at least one service' });
   }
 
-  const [svcs, cust] = await Promise.all([
-    Service.find({ _id: { $in: svcIds }, shopId: req.shopId }),
-    Customer.findOne({ _id: req.body.customerId, shopId: req.shopId })
-  ]);
-  if (!svcs.length || !cust) return res.status(404).json({ message: 'Service or customer not found in your shop' });
+  const svcs = await Service.find({ _id: { $in: svcIds }, shopId: req.shopId });
+  if (!svcs.length) return res.status(404).json({ message: 'Service not found in your shop' });
 
   const totalDuration = svcs.reduce((sum, s) => sum + (s.duration || 30), 0);
   const totalPrice = svcs.reduce((sum, s) => sum + (s.price || 0), 0);
@@ -377,7 +403,7 @@ r.post('/appointments', wrap(async (req, res) => {
     status: 'confirmed',
     staffName: req.body.staffName
   });
-  res.status(201).json({ data: a, message: `Appointment scheduled for ${cust.name} (${totalDuration}m, ₹${totalPrice})` });
+  res.status(201).json({ data: a, customer: cust, message: `Appointment scheduled for ${cust.name} (${totalDuration}m, ₹${totalPrice})` });
 }));
 r.patch('/appointments/:id', wrap(async (req, res) => {
   const ok = ['confirmed', 'in_progress', 'cancelled', 'rejected', 'no_show', 'completed'];
