@@ -144,140 +144,130 @@ export function ShopPage() {
   return (
     <div className="min-h-screen bg-stone-900 p-4 sm:p-6 flex flex-col justify-center items-center relative overflow-hidden">
       <div className="absolute top-1/4 -left-32 w-80 h-80 bg-amber-600/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="w-full max-w-md space-y-4 relative z-10">
-        {/* Shop Info Card with Custom Logo & Hours */}
-        <div className="bg-stone-800/90 border border-stone-700/80 rounded-3xl p-6 space-y-4 shadow-2xl backdrop-blur-xl text-white">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-md inline-block">
-                Verified Salon
+      <div className="absolute bottom-1/4 -right-32 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="w-full max-w-md relative z-10">
+        {/* Single Unified Modal with Shop Details and Register/Login */}
+        <div className="bg-[#181924] border border-stone-800/90 rounded-3xl shadow-2xl overflow-hidden backdrop-blur-xl">
+          {/* Shop Header Section */}
+          <div className="p-6 bg-gradient-to-b from-stone-800/70 to-transparent border-b border-stone-800/80">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/15 border border-amber-500/20 px-2 py-0.5 rounded-md inline-block">
+                  Verified Salon
+                </span>
+                <h1 className="text-2xl font-extrabold text-white mt-1.5 truncate">{info.shop.name}</h1>
+                {info.shop.description && (
+                  <p className="text-xs text-stone-400 mt-0.5 line-clamp-2 leading-relaxed">{info.shop.description}</p>
+                )}
+                <p className="text-xs text-stone-400 flex items-center gap-1.5 mt-2">
+                  <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span className="truncate">
+                    {info.shop.address ? `${info.shop.address}, ` : ''}
+                    {info.shop.city || 'City'}
+                  </span>
+                </p>
+                <p className="text-[11px] text-amber-400/90 font-medium flex items-center gap-1.5 mt-1">
+                  <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span>
+                    Hours: {fmt(info.shop.openMin)} – {fmt(info.shop.closeMin)}
+                  </span>
+                </p>
+              </div>
+
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-white flex items-center justify-center shadow-lg shadow-amber-600/30 overflow-hidden shrink-0 border border-amber-400/30">
+                {info.shop.logoUrl && !logoErr ? (
+                  <img
+                    src={info.shop.logoUrl}
+                    alt={info.shop.name}
+                    onError={() => setLogoErr(true)}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Scissors className="w-6 h-6 rotate-45" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Auth Form Inside Same Modal */}
+          <form onSubmit={go} className="p-6 space-y-4">
+            <div className="flex items-center justify-between pb-1">
+              <div>
+                <h2 className="text-base font-bold text-white">
+                  {mode === 'register' ? 'Register to Book' : 'Client Login'}
+                </h2>
+                <p className="text-xs text-stone-400 mt-0.5">
+                  {mode === 'register'
+                    ? 'Enter your details to schedule your appointment'
+                    : 'Sign in to access your bookings'}
+                </p>
+              </div>
+              <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                {mode === 'register' ? 'New Client' : 'Welcome back'}
               </span>
-              <h1 className="text-2xl font-extrabold text-white mt-1">{info.shop.name}</h1>
-              {info.shop.description && (
-                <p className="text-xs text-stone-400 mt-0.5 leading-snug">{info.shop.description}</p>
-              )}
-              <p className="text-xs text-stone-400 flex items-center gap-1.5 mt-1.5">
-                <MapPin className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                <span>
-                  {info.shop.address ? `${info.shop.address}, ` : ''}
-                  {info.shop.city || 'City'}
-                </span>
-              </p>
-              <p className="text-[11px] text-amber-400 font-medium flex items-center gap-1.5 mt-1">
-                <Clock className="w-3 h-3 text-amber-400 shrink-0" />
-                <span>
-                  Hours: {fmt(info.shop.openMin)} – {fmt(info.shop.closeMin)}
-                </span>
-              </p>
             </div>
 
-            <div className="w-14 h-14 rounded-2xl bg-amber-600 text-white flex items-center justify-center shadow-md shadow-amber-600/30 overflow-hidden shrink-0 border border-amber-500">
-              {info.shop.logoUrl && !logoErr ? (
-                <img
-                  src={info.shop.logoUrl}
-                  alt={info.shop.name}
-                  onError={() => setLogoErr(true)}
-                  className="w-full h-full object-cover"
+            {mode === 'register' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-stone-300">Full Name *</label>
+                <input
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-stone-900/90 border border-stone-700 text-stone-100 placeholder-stone-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition"
+                  placeholder="e.g. Rahul Sharma"
+                  required
+                  value={f.name || ''}
+                  onChange={(e) => setF({ ...f, name: e.target.value })}
                 />
-              ) : (
-                <Scissors className="w-6 h-6 rotate-45" />
-              )}
-            </div>
-          </div>
+              </div>
+            )}
 
-          {/* Services Menu Preview */}
-          <div className="pt-3 border-t border-stone-700/80 space-y-2">
-            <p className="text-xs font-semibold text-stone-300 uppercase tracking-wider">
-              Popular Services
-            </p>
-            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-              {info.services.map((s) => (
-                <div
-                  key={s._id}
-                  className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl bg-stone-700/50"
-                >
-                  <div>
-                    <span className="font-semibold text-stone-200 block">{s.name}</span>
-                    <span className="text-[10px] text-stone-400">{s.duration} mins</span>
-                  </div>
-                  <span className="font-bold text-amber-400">₹{s.price}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Customer Auth Card */}
-        <form onSubmit={go} className="card p-6 space-y-4 shadow-xl">
-          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-            <h2 className="text-base font-bold text-stone-900">
-              {mode === 'register' ? 'Register to Book' : 'Client Login'}
-            </h2>
-            <span className="text-xs text-stone-400">
-              {mode === 'register' ? 'Step 1 of 2' : 'Welcome back'}
-            </span>
-          </div>
-
-          {mode === 'register' && (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-600">Full Name *</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-stone-300">Mobile Number *</label>
               <input
-                className="inp"
-                placeholder="e.g. Rahul Sharma"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-stone-900/90 border border-stone-700 text-stone-100 placeholder-stone-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition"
+                placeholder="e.g. 9876543210"
                 required
-                value={f.name || ''}
-                onChange={(e) => setF({ ...f, name: e.target.value })}
+                value={f.mobile || ''}
+                onChange={(e) => setF({ ...f, mobile: e.target.value })}
               />
             </div>
-          )}
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-stone-600">Mobile Number *</label>
-            <input
-              className="inp"
-              placeholder="e.g. 9876543210"
-              required
-              value={f.mobile || ''}
-              onChange={(e) => setF({ ...f, mobile: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-stone-600">Password *</label>
-            <input
-              className="inp"
-              type="password"
-              placeholder="••••••••"
-              required
-              value={f.password || ''}
-              onChange={(e) => setF({ ...f, password: e.target.value })}
-            />
-          </div>
-
-          {err && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{err}</span>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-stone-300">Password *</label>
+              <input
+                className="w-full px-3.5 py-2.5 rounded-xl bg-stone-900/90 border border-stone-700 text-stone-100 placeholder-stone-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition"
+                type="password"
+                placeholder="••••••••"
+                required
+                value={f.password || ''}
+                onChange={(e) => setF({ ...f, password: e.target.value })}
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-brand w-full py-3"
-          >
-            <span>{loading ? 'Processing...' : mode === 'register' ? 'Register & Continue' : 'Sign In'}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+            {err && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-xs">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{err}</span>
+              </div>
+            )}
 
-          <button
-            type="button"
-            className="w-full text-center text-xs text-stone-500 hover:text-stone-900 pt-1"
-            onClick={() => setMode(mode === 'register' ? 'login' : 'register')}
-          >
-            {mode === 'register' ? 'Already registered? Sign in' : 'New client? Register here'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-brand w-full py-3 shadow-lg shadow-amber-600/20"
+            >
+              <span>{loading ? 'Processing...' : mode === 'register' ? 'Register & Continue' : 'Sign In'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              className="w-full text-center text-xs text-stone-400 hover:text-amber-400 transition pt-1"
+              onClick={() => setMode(mode === 'register' ? 'login' : 'register')}
+            >
+              {mode === 'register' ? 'Already registered? Sign in' : 'New client? Register here'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -1873,11 +1863,10 @@ export default function Customer() {
               <button
                 type="button"
                 onClick={() => setCustomerNotifTab('unread')}
-                className={`flex-1 py-1.5 px-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs ${
-                  customerNotifTab === 'unread'
+                className={`flex-1 py-1.5 px-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs ${customerNotifTab === 'unread'
                     ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-xs'
                     : 'text-stone-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <span>Latest (Unread)</span>
                 {unreadCount > 0 && (
@@ -1889,11 +1878,10 @@ export default function Customer() {
               <button
                 type="button"
                 onClick={() => setCustomerNotifTab('all')}
-                className={`flex-1 py-1.5 px-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs ${
-                  customerNotifTab === 'all'
+                className={`flex-1 py-1.5 px-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs ${customerNotifTab === 'all'
                     ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-xs'
                     : 'text-stone-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <span>Daily All</span>
                 <span className="text-[10px] text-stone-500 font-normal">({customerNotifs.length})</span>
@@ -1951,11 +1939,10 @@ export default function Customer() {
                           setShowNotifDrawer(false);
                           setActiveTab('appointments');
                         }}
-                        className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${
-                          n.isUrgent || n.type === 'reminder'
+                        className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${n.isUrgent || n.type === 'reminder'
                             ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
                             : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-1.5">
@@ -2024,13 +2011,12 @@ export default function Customer() {
                               setShowNotifDrawer(false);
                               setActiveTab('appointments');
                             }}
-                            className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${
-                              n.isUrgent || n.type === 'reminder'
+                            className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${n.isUrgent || n.type === 'reminder'
                                 ? 'bg-amber-500/15 border-amber-500/50 hover:bg-amber-500/20'
                                 : n.read
                                   ? 'bg-[#191a23] border-stone-800/80 hover:border-stone-700 opacity-80'
                                   : 'bg-[#1e202c] border-amber-500/30 hover:border-amber-500/50'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex items-center gap-1.5">
