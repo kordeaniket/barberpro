@@ -576,4 +576,16 @@ r.get('/slots', wrap(async (req, res) => {
   res.json(allSlots);
 }));
 
+const { process1HourReminders, sendDirectAppointmentReminder } = require('../services/reminders');
+
+r.post('/appointments/:id/send-reminder', wrap(async (req, res) => {
+  const result = await sendDirectAppointmentReminder(req.params.id, req.shopId, req.body.message);
+  res.json({ message: '1-Hour WhatsApp reminder sent successfully', ...result });
+}));
+
+r.post('/reminders/check', wrap(async (req, res) => {
+  const dispatched = await process1HourReminders();
+  res.json({ message: `Checked 1-hour reminders. Dispatched to ${dispatched.length} appointment(s)`, dispatched });
+}));
+
 module.exports = r;

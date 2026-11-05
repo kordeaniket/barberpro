@@ -44,6 +44,7 @@ const apptSchema = new Schema({
   date: { type: String, required: true }, startMin: { type: Number, required: true }, endMin: { type: Number, required: true },
   status: { type: String, enum: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rejected', 'no_show'], default: 'pending' },
   blocking: { type: Boolean, default: true }, source: { type: String, default: 'barber' },
+  reminded1h: { type: Boolean, default: false }, remindedAt: Date,
 }, T);
 apptSchema.pre('save', function (next) { this.blocking = BLOCKING.includes(this.status); next(); });
 apptSchema.index({ shopId: 1, date: 1, startMin: 1 }, { unique: true, partialFilterExpression: { blocking: true } });

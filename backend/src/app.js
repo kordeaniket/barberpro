@@ -55,6 +55,23 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/super', require('./routes/super'));
 app.use('/api/barber', require('./routes/barber'));
 app.use('/api/customer', require('./routes/customer'));
+
+// Automated 1-hour background WhatsApp reminder runner
+const { process1HourReminders } = require('./services/reminders');
+let reminderTimerStarted = false;
+if (!reminderTimerStarted && process.env.NODE_ENV !== 'test') {
+  reminderTimerStarted = true;
+  setInterval(async () => {
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await process1HourReminders();
+      }
+    } catch {
+      // background interval
+    }
+  }, 2 * 60 * 1000);
+}
+
 app.get('/api/health', (q, r) => r.json({ ok: true, timestamp: new Date().toISOString() }));
 app.get('/', (q, r) => r.json({ message: 'BarberPro API Server is running', ok: true }));
 

@@ -63,7 +63,8 @@ import {
   ArrowDownRight,
   Activity,
   ExternalLink,
-  Trash2
+  Trash2,
+  MessageCircle
 } from 'lucide-react';
 
 const barberLinks = [
@@ -530,6 +531,9 @@ function DashCard({ label, value, icon: Icon, color = 'amber', isCurrency, sub }
 
 function Appts() {
   const d = useDispatch();
+  const u = useSelector((s) => s.auth.user);
+  const shopData = useSelector((s) => s.ui.data.shopinfo?.shop);
+  const activeShop = shopData || u?.shop;
   const custs = useSelector((x) => x.ui.data.customers) || [];
   const svcs = useSelector((x) => x.ui.data.services) || [];
 
