@@ -480,8 +480,8 @@ function Appts() {
                     key={s._id}
                     onClick={() => toggleWalkInService(s._id)}
                     className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-xs ${isChecked
-                        ? 'border-amber-600 bg-amber-50 text-amber-950 font-bold ring-1 ring-amber-600/50'
-                        : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+                      ? 'border-amber-600 bg-amber-50 text-amber-950 font-bold ring-1 ring-amber-600/50'
+                      : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
                       }`}
                   >
                     <div>
@@ -518,22 +518,22 @@ function Appts() {
           <button
             onClick={() => setViewMode('table')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${viewMode === 'table'
-                ? 'bg-white text-stone-900 shadow-sm'
-                : 'text-stone-600 hover:text-stone-900'
+              ? 'bg-white text-stone-900 shadow-sm'
+              : 'text-stone-600 hover:text-stone-900'
               }`}
           >
             <Table className="w-4 h-4 text-amber-600" />
-            <span>Table View (Paginated)</span>
+            <span>Table View</span>
           </button>
           <button
             onClick={() => setViewMode('calendar')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${viewMode === 'calendar'
-                ? 'bg-white text-stone-900 shadow-sm'
-                : 'text-stone-600 hover:text-stone-900'
+              ? 'bg-white text-stone-900 shadow-sm'
+              : 'text-stone-600 hover:text-stone-900'
               }`}
           >
             <Calendar className="w-4 h-4 text-amber-600" />
-            <span>Calendar Planner (Syncfusion)</span>
+            <span>Calendar View</span>
           </button>
         </div>
 
@@ -543,18 +543,20 @@ function Appts() {
       </div>
 
       {/* ================= VIEW 1: TABLE VIEW (SERVER-SIDE PAGINATION) ================= */}
+
       {viewMode === 'table' && (
         <div className="space-y-4 animate-in fade-in duration-150">
-          {/* Table Filters & Search Bar */}
-          <div className="card p-4 space-y-3">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              {/* Search Bar */}
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+
+          {/* Table Filters & Search Bar - Managed cleanly on screen with NO horizontal scroll */}
+          <div className="card p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              {/* Search Bar - Flexibly fills available screen space */}
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Search by client name, mobile phone, service..."
-                  className="inp pl-9 text-xs"
+                  className="inp pl-9 text-xs w-full"
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
@@ -563,47 +565,53 @@ function Appts() {
                 />
               </div>
 
-              {/* Status and Date Quick Selectors */}
-              <div className="flex items-center gap-2 flex-wrap">
+              {/* Filter Dropdowns - 3 balanced columns on mobile, inline on desktop, zero horizontal scroll */}
+              <div className="grid grid-cols-3 sm:flex sm:items-center gap-2 shrink-0">
+                {/* Status Filter */}
                 <select
-                  className="inp w-auto text-xs py-2 px-3"
+                  className="inp text-xs py-2 px-2.5 sm:w-auto"
                   value={statusFilter}
                   onChange={(e) => {
                     setStatusFilter(e.target.value);
                     setPage(1);
                   }}
+                  title="Filter by Status"
                 >
-                  <option value="all">All Statuses</option>
+                  <option value="all">All Status</option>
                   <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed & In Progress</option>
+                  <option value="confirmed">Confirmed</option>
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
 
+                {/* Date Filter */}
                 <select
-                  className="inp w-auto text-xs py-2 px-3"
+                  className="inp text-xs py-2 px-2.5 sm:w-auto"
                   value={dateFilter}
                   onChange={(e) => {
                     setDateFilter(e.target.value);
                     setPage(1);
                   }}
+                  title="Filter by Date"
                 >
                   <option value="all">All Dates</option>
                   <option value="today">Today</option>
                   <option value="tomorrow">Tomorrow</option>
                 </select>
 
+                {/* Records Per Page */}
                 <select
-                  className="inp w-auto text-xs py-2 px-3"
+                  className="inp text-xs py-2 px-2.5 sm:w-auto"
                   value={limit}
                   onChange={(e) => {
                     setLimit(Number(e.target.value));
                     setPage(1);
                   }}
+                  title="Records per page"
                 >
-                  <option value={10}>10 per page</option>
-                  <option value={25}>25 per page</option>
-                  <option value={50}>50 per page</option>
+                  <option value={10}>10 / page</option>
+                  <option value={25}>25 / page</option>
+                  <option value={50}>50 / page</option>
                 </select>
               </div>
             </div>
@@ -612,7 +620,7 @@ function Appts() {
           {/* Paginated Data Table */}
           <div className="card p-0 overflow-hidden border border-stone-200">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full min-w-[850px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-200 text-stone-600 font-semibold uppercase tracking-wider text-[11px]">
                     <th className="py-3.5 px-4">Client</th>
@@ -623,6 +631,7 @@ function Appts() {
                     <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
+
                 <tbody className="divide-y divide-stone-100">
                   {tableLoading ? (
                     <tr>
@@ -635,25 +644,38 @@ function Appts() {
                     <tr>
                       <td colSpan={6} className="py-12 text-center text-stone-400">
                         <Calendar className="w-8 h-8 text-stone-300 mx-auto mb-2" />
-                        <p className="font-semibold text-stone-700 text-sm">No matching appointments found</p>
-                        <p className="text-xs text-stone-400 mt-1">Try resetting filters or scheduling a walk-in booking.</p>
+                        <p className="font-semibold text-stone-700 text-sm">
+                          No matching appointments found
+                        </p>
+                        <p className="text-xs text-stone-400 mt-1">
+                          Try resetting filters or scheduling a walk-in booking.
+                        </p>
                       </td>
                     </tr>
                   ) : (
                     tableData.map((a) => {
-                      const duration = a.duration || (a.endMin - a.startMin) || 30;
+                      const duration =
+                        a.duration || (a.endMin - a.startMin) || 30;
+
                       return (
-                        <tr key={a._id} className="hover:bg-amber-50/30 transition-colors">
+                        <tr
+                          key={a._id}
+                          className="hover:bg-amber-50/30 transition-colors"
+                        >
                           {/* Client */}
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-2.5">
                               <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center shrink-0 text-xs">
-                                {a.customerId?.name ? a.customerId.name[0].toUpperCase() : 'C'}
+                                {a.customerId?.name
+                                  ? a.customerId.name[0].toUpperCase()
+                                  : 'C'}
                               </div>
+
                               <div>
                                 <span className="font-bold text-stone-900 block leading-tight">
                                   {a.customerId?.name || 'Walk-In Client'}
                                 </span>
+
                                 {a.customerId?.mobile && (
                                   <a
                                     href={`tel:${a.customerId.mobile}`}
@@ -673,17 +695,24 @@ function Appts() {
                               <span className="font-semibold text-stone-900 block leading-tight">
                                 {a.serviceName}
                               </span>
+
                               <span className="text-[11px] text-stone-500 flex items-center gap-1 mt-0.5">
                                 <Clock className="w-3 h-3 text-stone-400" />
                                 <span>{duration} mins approx</span>
-                                {a.staffName && <span className="text-amber-700 font-medium">• {a.staffName}</span>}
+                                {a.staffName && (
+                                  <span className="text-amber-700 font-medium">
+                                    • {a.staffName}
+                                  </span>
+                                )}
                               </span>
                             </div>
                           </td>
 
                           {/* Date & Slot */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className="font-bold text-stone-800 block text-xs">{a.date}</span>
+                            <span className="font-bold text-stone-800 block text-xs">
+                              {a.date}
+                            </span>
                             <span className="text-[11px] text-stone-500">
                               {fmt(a.startMin)} – {fmt(a.endMin)}
                             </span>
@@ -691,7 +720,9 @@ function Appts() {
 
                           {/* Amount */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className="font-extrabold text-stone-900 block text-xs">₹{a.price}</span>
+                            <span className="font-extrabold text-stone-900 block text-xs">
+                              ₹{a.price}
+                            </span>
                             <span className="text-[10px] text-stone-400 uppercase font-semibold">
                               {a.source === 'online' ? 'Online' : 'Walk-in'}
                             </span>
@@ -714,6 +745,7 @@ function Appts() {
                                     <Check className="w-3.5 h-3.5" />
                                     <span>Accept</span>
                                   </button>
+
                                   <button
                                     onClick={() =>
                                       setStatusConfirm({
@@ -742,6 +774,7 @@ function Appts() {
                                       <span>In Chair</span>
                                     </button>
                                   )}
+
                                   <button
                                     onClick={() => {
                                       setPayMethod('cash');
@@ -752,6 +785,7 @@ function Appts() {
                                     <CreditCard className="w-3.5 h-3.5" />
                                     <span>Bill</span>
                                   </button>
+
                                   <button
                                     onClick={() =>
                                       setStatusConfirm({
@@ -787,7 +821,7 @@ function Appts() {
             </div>
 
             {/* Backend Pagination Bar */}
-            <div className="p-4 bg-stone-50 border-t border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-stone-600">
+            <div className="p-3 sm:p-4 bg-stone-50 border-t border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-stone-600">
               <div>
                 Showing{' '}
                 <span className="font-bold text-stone-900">
@@ -797,7 +831,11 @@ function Appts() {
                 <span className="font-bold text-stone-900">
                   {Math.min(page * limit, totalCount)}
                 </span>{' '}
-                of <span className="font-bold text-stone-900">{totalCount}</span> appointments
+                of{' '}
+                <span className="font-bold text-stone-900">
+                  {totalCount}
+                </span>{' '}
+                appointments
               </div>
 
               {/* Page Number Buttons */}
@@ -812,37 +850,43 @@ function Appts() {
                   <ChevronLeft className="w-4 h-4" />
                 </button>
 
-                {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
-                  let pNum;
-                  if (totalPages <= 5) {
-                    pNum = idx + 1;
-                  } else if (page <= 3) {
-                    pNum = idx + 1;
-                  } else if (page >= totalPages - 2) {
-                    pNum = totalPages - 4 + idx;
-                  } else {
-                    pNum = page - 2 + idx;
-                  }
+                {Array.from(
+                  { length: Math.min(5, totalPages) },
+                  (_, idx) => {
+                    let pNum;
 
-                  return (
-                    <button
-                      key={pNum}
-                      type="button"
-                      onClick={() => setPage(pNum)}
-                      className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${page === pNum
+                    if (totalPages <= 5) {
+                      pNum = idx + 1;
+                    } else if (page <= 3) {
+                      pNum = idx + 1;
+                    } else if (page >= totalPages - 2) {
+                      pNum = totalPages - 4 + idx;
+                    } else {
+                      pNum = page - 2 + idx;
+                    }
+
+                    return (
+                      <button
+                        key={pNum}
+                        type="button"
+                        onClick={() => setPage(pNum)}
+                        className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${page === pNum
                           ? 'bg-amber-600 text-white shadow-xs'
                           : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-300'
-                        }`}
-                    >
-                      {pNum}
-                    </button>
-                  );
-                })}
+                          }`}
+                      >
+                        {pNum}
+                      </button>
+                    );
+                  }
+                )}
 
                 <button
                   type="button"
                   disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setPage((p) => Math.min(totalPages, p + 1))
+                  }
                   className="btn-o p-1.5 text-xs disabled:opacity-40"
                   title="Next Page"
                 >
@@ -853,6 +897,7 @@ function Appts() {
           </div>
         </div>
       )}
+
 
       {/* ================= VIEW 2: CALENDAR SCHEDULER (SYNCFUSION) ================= */}
       {viewMode === 'calendar' && (
@@ -1074,8 +1119,8 @@ function Appts() {
                 type="button"
                 onClick={() => setPayMethod(m.id)}
                 className={`py-2 px-3 rounded-xl border text-center transition-all ${payMethod === m.id
-                    ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold ring-1 ring-amber-600'
-                    : 'border-stone-200 hover:border-stone-300 text-stone-700'
+                  ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold ring-1 ring-amber-600'
+                  : 'border-stone-200 hover:border-stone-300 text-stone-700'
                   }`}
               >
                 {m.label}
@@ -1131,7 +1176,7 @@ const DAYS = [
 
 function StoreAndProfile() {
   const d = useDispatch();
-  const [tab, setTab] = useState('store'); // 'store' | 'profile'
+  const [tab, setTab] = useState('store'); // 'store' | 'profile' | 'password
   const [shopForm, setShopForm] = useState({
     name: '',
     ownerName: '',
@@ -1295,6 +1340,21 @@ function StoreAndProfile() {
         >
           <User className="w-4 h-4" />
           <span>Barber Personal Profile</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setShowPwModal(true);
+            setTab('password');
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'password'
+            ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
+            : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+            }`}
+        >
+          <KeyRound className="w-3.5 h-3.5" />
+          <span>Change Password</span>
         </button>
       </div>
 
@@ -1575,15 +1635,8 @@ function StoreAndProfile() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-stone-100 flex items-center justify-between flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPwModal(true)}
-                className="btn-o text-xs py-2 px-3"
-              >
-                <KeyRound className="w-3.5 h-3.5" />
-                <span>Change Password</span>
-              </button>
+            <div className="pt-3 border-t border-stone-100 flex flex-wrap gap-2">
+
 
               <button type="submit" className="btn-brand px-6 py-2.5">
                 <Save className="w-4 h-4" />
