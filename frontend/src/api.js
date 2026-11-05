@@ -21,7 +21,10 @@ export const stopLoading = () => {
   listeners.forEach((cb) => cb(activeRequests > 0));
 };
 
-const api = axios.create({ baseURL: '/api' });
+const rawBase = import.meta.env.VITE_API_URL;
+export const API_BASE = rawBase ? `${rawBase.replace(/\/+$/, '')}/api` : '/api';
+
+const api = axios.create({ baseURL: API_BASE });
 
 api.interceptors.request.use(
   (c) => {
@@ -50,7 +53,7 @@ api.interceptors.response.use(
     if (e.response?.status === 401 && rt && !o?._retry && !o?.url?.includes('/auth/')) {
       o._retry = true;
       try {
-        const { data } = await axios.post('/api/auth/refresh', { refreshToken: rt });
+        const { data } = await axios.post(`${API_BASE}/auth/refresh`, { refreshToken: rt });
         saveSession(data);
         if (o?._tracked) stopLoading();
         return api(o);

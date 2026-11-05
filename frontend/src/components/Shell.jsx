@@ -252,6 +252,109 @@ function NotificationMenu({ isMobile = false }) {
   );
 }
 
+function UserProfileMenu({ onLogout, isMobile = false }) {
+  const u = useSelector((s) => s.auth.user);
+  const nav = useNavigate();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [open]);
+
+  const isBarber = u?.role === 'barber';
+  const roleLabel = u?.role === 'superadmin' ? 'Super Admin' : isBarber ? 'Barber Store' : 'Customer';
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all ${
+          isMobile
+            ? 'border-stone-700 bg-stone-800 text-white hover:bg-stone-700'
+            : 'border-stone-200/90 bg-white text-stone-800 hover:bg-stone-50 hover:border-stone-300 shadow-xs'
+        }`}
+        aria-label="User profile menu"
+      >
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+          {u?.avatarUrl ? (
+            <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" />
+          ) : u?.name ? (
+            u.name[0].toUpperCase()
+          ) : (
+            <User className="w-4 h-4" />
+          )}
+        </div>
+        <div className="hidden sm:block text-left min-w-0 max-w-[120px]">
+          <span className="text-xs font-bold text-stone-900 block truncate leading-tight">
+            {u?.name || 'Account'}
+          </span>
+          <span className="text-[10px] text-amber-700 font-medium block truncate leading-tight">
+            {roleLabel}
+          </span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-white border border-stone-200 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="px-3.5 py-2.5 border-b border-stone-100 flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+              {u?.avatarUrl ? (
+                <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" />
+              ) : u?.name ? (
+                u.name[0].toUpperCase()
+              ) : (
+                <User className="w-4 h-4" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-stone-900 truncate">{u?.name || 'User'}</p>
+              <p className="text-[11px] text-stone-500 truncate">{u?.mobile || u?.email || ''}</p>
+              <span className="inline-block mt-0.5 text-[9px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                {roleLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="p-1 space-y-0.5">
+            {isBarber && (
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  nav('/barber/store');
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-stone-700 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-colors text-left"
+              >
+                <User className="w-3.5 h-3.5 text-stone-400" />
+                <span>Store & Profile Settings</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                setOpen(false);
+                onLogout();
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Toast() {
   const m = useSelector((s) => s.ui.msg);
   const d = useDispatch();
@@ -345,7 +448,8 @@ export default function Shell({ title, links, children, actions, subtitle }) {
       })
       .catch(() => {});
 
-    const socket = io({ auth: { token } });
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || undefined;
+    const socket = socketUrl ? io(socketUrl, { auth: { token } }) : io({ auth: { token } });
 
     socket.on('booking:new', (data) => {
       d(notifications.actions.addNotification(data));
@@ -437,26 +541,6 @@ export default function Shell({ title, links, children, actions, subtitle }) {
             );
           })}
         </nav>
-
-        {/* User Profile Card & Logout */}
-        <div className="p-3 border-t border-stone-800 bg-stone-950/40 shrink-0">
-          <div className="flex items-center gap-3 p-2 rounded-xl mb-1">
-            <div className="w-9 h-9 rounded-xl bg-stone-800 border border-stone-700 flex items-center justify-center text-amber-400 font-semibold text-sm shrink-0">
-              {u?.name ? u.name[0].toUpperCase() : <User className="w-4 h-4" />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-white truncate">{u?.name || 'User'}</p>
-              <p className="text-[11px] text-stone-400 truncate">{u?.mobile || ''}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowLogoutModal(true)}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-stone-400 hover:text-red-400 hover:bg-red-950/30 rounded-xl transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign out</span>
-          </button>
-        </div>
       </aside>
 
       {/* Main Content Area - offset for fixed sidebar on desktop */}
@@ -484,6 +568,7 @@ export default function Shell({ title, links, children, actions, subtitle }) {
         </div>
         <div className="flex items-center gap-2">
           {isBarber && <NotificationMenu isMobile={true} />}
+          <UserProfileMenu onLogout={() => setShowLogoutModal(true)} isMobile={true} />
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 transition-colors"
@@ -583,9 +668,10 @@ export default function Shell({ title, links, children, actions, subtitle }) {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">{title}</h1>
             {subtitle && <p className="text-xs sm:text-sm text-stone-500 mt-0.5">{subtitle}</p>}
           </div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {isBarber && <NotificationMenu />}
+          <div className="flex items-center gap-2.5 flex-wrap self-end sm:self-center">
             {actions}
+            {isBarber && <NotificationMenu />}
+            <UserProfileMenu onLogout={() => setShowLogoutModal(true)} />
           </div>
         </div>
 

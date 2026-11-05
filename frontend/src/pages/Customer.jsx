@@ -416,7 +416,8 @@ export default function Customer() {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const socket = io({ auth: { token } });
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || undefined;
+    const socket = socketUrl ? io(socketUrl, { auth: { token } }) : io({ auth: { token } });
 
     socket.on('booking:updated', (data) => {
       playNotificationChime();
