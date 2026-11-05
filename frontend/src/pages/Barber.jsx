@@ -284,6 +284,15 @@ function Appts() {
     }
   }, [viewMode]);
 
+  // Auto-refresh when a real-time notification triggers a refresh
+  const refreshTrigger = useSelector((x) => x.ui.refreshTrigger);
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      loadTableData();
+      if (viewMode === 'calendar') loadCalendarData();
+    }
+  }, [refreshTrigger]);
+
   // Refresh both views
   const refreshAll = () => {
     loadTableData();

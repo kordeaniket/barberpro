@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
-export const auth = createSlice({ name: 'auth', initialState: { user: JSON.parse(localStorage.getItem('user') || 'null'), error: null, busy: false },
+export const auth = createSlice({
+  name: 'auth', initialState: { user: JSON.parse(localStorage.getItem('user') || 'null'), error: null, busy: false },
   reducers: {
     loginRequest: (s) => { s.error = null; s.busy = true; },
     loginSuccess: (s, a) => { s.user = a.payload; s.busy = false; },
@@ -15,8 +16,10 @@ export const auth = createSlice({ name: 'auth', initialState: { user: JSON.parse
     }
   }
 });
-export const ui = createSlice({ name: 'ui', initialState: { data: {}, msg: null },
-  reducers: { fetchRequest: () => {}, setData: (s, a) => { s.data[a.payload.key] = a.payload.data; }, submitRequest: () => {}, setMsg: (s, a) => { s.msg = a.payload; } } });
+export const ui = createSlice({
+  name: 'ui', initialState: { data: {}, msg: null, refreshTrigger: 0 },
+  reducers: { fetchRequest: () => { }, setData: (s, a) => { s.data[a.payload.key] = a.payload.data; }, submitRequest: () => { }, setMsg: (s, a) => { s.msg = a.payload; }, triggerRefresh: (s) => { s.refreshTrigger += 1; } }
+});
 
 const initialNotifs = JSON.parse(localStorage.getItem('barber_notifications') || '[]');
 export const notifications = createSlice({

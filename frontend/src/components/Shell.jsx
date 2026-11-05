@@ -359,6 +359,7 @@ export default function Shell({ title, links, children, actions, subtitle }) {
       // Automatically refresh live dashboard & appointments data
       d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
       d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
+      d(ui.actions.triggerRefresh());
     });
 
     socket.on('booking:cancelled', (data) => {
@@ -371,6 +372,7 @@ export default function Shell({ title, links, children, actions, subtitle }) {
       );
       d(ui.actions.fetchRequest({ key: 'dash', url: '/barber/dashboard' }));
       d(ui.actions.fetchRequest({ key: 'appts', url: '/barber/appointments' }));
+      d(ui.actions.triggerRefresh());
     });
 
     return () => socket.close();
