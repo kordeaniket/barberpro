@@ -244,9 +244,8 @@ export default function Crud({
                       {cols.map((c, i) => (
                         <td
                           key={c.n}
-                          className={`py-3.5 px-4 ${
-                            i === 0 ? 'font-medium text-stone-900' : 'text-stone-600'
-                          }`}
+                          className={`py-3.5 px-4 ${i === 0 ? 'font-medium text-stone-900' : 'text-stone-600'
+                            }`}
                         >
                           {String(r[c.n] ?? '–')}
                         </td>
@@ -257,7 +256,6 @@ export default function Crud({
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-stone-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
                         </button>
                       </td>
                     </tr>

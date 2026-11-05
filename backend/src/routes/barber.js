@@ -2,7 +2,7 @@ const r = require('express').Router();
 const { Shop, User, Customer, Service, Appointment, Invoice } = require('../models');
 const { auth } = require('../middleware/auth');
 const { wrap, pick, need, today } = require('../utils/helpers');
-const { hasConflict } = require('../utils/slots');
+const { hasConflict, genSlots } = require('../utils/slots');
 const { emitUser } = require('../sockets');
 const { sendWhatsApp } = require('../services/whatsapp');
 r.use(auth('barber'));
@@ -468,6 +468,97 @@ r.get('/notifications', wrap(async (req, res) => {
   });
 
   res.json(notifs);
+}));
+
+// ── Client Management ───────────────────────────────────────────────
+
+r.get('/customers-paginated', wrap(async (req, res) => {
+  const page  = Math.max(parseInt(req.query.page)  || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+  const skip  = (page - 1) * limit;
+
+  const filter = { shopId: req.shopId, deleted: false };
+
+  if (req.query.search) {
+    const regex = new RegExp(req.query.search, 'i');
+    filter.$or = [{ name: regex }, { mobile: regex }, { email: regex }];
+  }
+
+  const [customers, total] = await Promise.all([
+    Customer.find(filter).sort('-createdAt').skip(skip).limit(limit),
+    Customer.countDocuments(filter)
+  ]);
+
+  res.json({ customers, total, page, limit, totalPages: Math.ceil(total / limit) });
+}));
+
+r.get('/customers/:id/ledger', wrap(async (req, res) => {
+  const customer = await Customer.findOne({ _id: req.params.id, shopId: req.shopId, deleted: false })
+    .select('name mobile email notes loyaltyPoints createdAt');
+  if (!customer) return res.status(404).json({ message: 'Customer not found' });
+
+  const [appointments, invoices] = await Promise.all([
+    Appointment.find({ customerId: req.params.id, shopId: req.shopId })
+      .populate('services.serviceId')
+      .sort('-date'),
+    Invoice.find({ customerId: req.params.id, shopId: req.shopId })
+      .sort('-createdAt')
+  ]);
+
+  const completedAppts = appointments.filter(a => a.status === 'completed');
+  const totalSpent     = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const cancelledCount = appointments.filter(a => a.status === 'cancelled').length;
+  const lastVisitDate  = completedAppts.length ? completedAppts[0].date : null;
+
+  res.json({
+    customer,
+    stats: {
+      totalVisits:      appointments.length,
+      completedVisits:  completedAppts.length,
+      totalSpent,
+      cancelledCount,
+      lastVisitDate,
+      avgSpendPerVisit: completedAppts.length ? +(totalSpent / completedAppts.length).toFixed(2) : 0
+    },
+    appointments,
+    invoices
+  });
+}));
+
+r.get('/slots', wrap(async (req, res) => {
+  const shop = req.shop;
+  let duration = 30;
+  if (req.query.duration && Number(req.query.duration) > 0) {
+    duration = Number(req.query.duration);
+  } else if (req.query.serviceIds) {
+    const rawIds = Array.isArray(req.query.serviceIds)
+      ? req.query.serviceIds
+      : String(req.query.serviceIds).split(',').map((id) => id.trim()).filter(Boolean);
+    const svcs = await Service.find({ _id: { $in: rawIds }, shopId: req.shopId });
+    if (svcs.length > 0) {
+      duration = svcs.reduce((acc, x) => acc + (x.duration || 30), 0);
+    }
+  }
+
+  const date = req.query.date || today();
+  if (shop.holidays && shop.holidays.includes(new Date(date).getDay())) {
+    return res.json([]);
+  }
+
+  const booked = await Appointment.find({ shopId: req.shopId, date, blocking: true });
+  const allSlots = genSlots({ openMin: shop.openMin, closeMin: shop.closeMin, duration, booked });
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const currentMin = now.getHours() * 60 + now.getMinutes();
+
+  const remainingSlots = allSlots.filter((slot) => {
+    if (!slot.available) return false;
+    if (date === todayStr && slot.startMin <= currentMin) return false;
+    return true;
+  });
+
+  res.json(remainingSlots);
 }));
 
 module.exports = r;

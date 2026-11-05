@@ -62,7 +62,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Activity,
-  ExternalLink
+  ExternalLink,
+  Trash2
 } from 'lucide-react';
 
 const barberLinks = [
@@ -174,11 +175,10 @@ function Home() {
             <button
               key={p.id}
               onClick={() => setPeriod(p.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                period === p.id
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${period === p.id
                   ? 'bg-amber-600 text-white shadow-sm'
                   : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
-              }`}
+                }`}
             >
               {p.label}
             </button>
@@ -217,7 +217,7 @@ function Home() {
         <DashCard label="Total Revenue" value={`₹${(s.totalRevenue || 0).toLocaleString('en-IN')}`} icon={IndianRupee} color="amber" isCurrency />
         <DashCard label="Avg. Ticket Size" value={`₹${(s.avgTicketSize || 0).toLocaleString('en-IN')}`} icon={Wallet} color="blue" isCurrency />
         <DashCard label="Registered Clients" value={s.totalCustomers} icon={Users} color="blue" />
-        <DashCard label="New Clients" value={s.newCustomers} icon={UserPlus} color="purple" sub={period !== 'daily' ? `in this ${period.replace('ly','')}` : 'today'} />
+        <DashCard label="New Clients" value={s.newCustomers} icon={UserPlus} color="purple" sub={period !== 'daily' ? `in this ${period.replace('ly', '')}` : 'today'} />
         <DashCard label="Online Bookings" value={s.onlineBookings} icon={Activity} color="emerald" />
         <DashCard label="Walk-In Bookings" value={s.walkInBookings} icon={Store} color="stone" />
         <DashCard label="Pending Requests" value={s.pendingAppointments} icon={Clock} color="purple" />
@@ -248,7 +248,7 @@ function Home() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
+                <YAxis tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`} />
                 <Tooltip
                   contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                   formatter={(v) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
@@ -275,9 +275,9 @@ function Home() {
                 <YAxis tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="completed" name="Completed" fill="#059669" radius={[4,4,0,0]} />
-                <Bar dataKey="pending" name="Pending" fill="#8b5cf6" radius={[4,4,0,0]} />
-                <Bar dataKey="cancelled" name="Cancelled" fill="#78716c" radius={[4,4,0,0]} />
+                <Bar dataKey="completed" name="Completed" fill="#059669" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="pending" name="Pending" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="cancelled" name="Cancelled" fill="#78716c" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -350,7 +350,7 @@ function Home() {
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '12px' }} formatter={(v) => [v, 'New Clients']} />
-                <Bar dataKey="count" name="New Clients" fill="#10b981" radius={[6,6,0,0]} />
+                <Bar dataKey="count" name="New Clients" fill="#10b981" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -455,7 +455,7 @@ function Home() {
               title="Share link directly to WhatsApp"
             >
               <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
               </svg>
               <span>Share on WhatsApp</span>
             </button>
@@ -552,13 +552,15 @@ function Appts() {
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [selectedCalAppt, setSelectedCalAppt] = useState(null);
 
-  // Walk-in / Manual Booking Form State
+  // Walk-in / Manual Booking Form State (Modal)
   const [showAddForm, setShowAddForm] = useState(false);
   const [walkInCustId, setWalkInCustId] = useState('');
   const [walkInServiceIds, setWalkInServiceIds] = useState([]);
   const [walkInDate, setWalkInDate] = useState(new Date().toISOString().slice(0, 10));
-  const [walkInTime, setWalkInTime] = useState('10:00');
+  const [walkInStartMin, setWalkInStartMin] = useState(null);
   const [walkInStaff, setWalkInStaff] = useState('');
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
 
   // Modals
   const [billingTarget, setBillingTarget] = useState(null);
@@ -727,6 +729,48 @@ function Appts() {
     );
   };
 
+  // Fetch remaining available slots for Walk-In booking
+  useEffect(() => {
+    if (!showAddForm || !walkInDate || walkInServiceIds.length === 0) {
+      setAvailableSlots([]);
+      setWalkInStartMin(null);
+      return;
+    }
+    let isCancelled = false;
+    const fetchRemainingSlots = async () => {
+      setSlotsLoading(true);
+      try {
+        const res = await api.get('/barber/slots', {
+          params: {
+            date: walkInDate,
+            serviceIds: walkInServiceIds.join(',')
+          },
+          skipGlobalLoader: true
+        });
+        if (!isCancelled) {
+          const list = Array.isArray(res.data) ? res.data : [];
+          setAvailableSlots(list);
+          if (list.length > 0) {
+            setWalkInStartMin((prev) => (list.some((s) => s.startMin === prev) ? prev : list[0].startMin));
+          } else {
+            setWalkInStartMin(null);
+          }
+        }
+      } catch {
+        if (!isCancelled) {
+          setAvailableSlots([]);
+          setWalkInStartMin(null);
+        }
+      } finally {
+        if (!isCancelled) setSlotsLoading(false);
+      }
+    };
+    fetchRemainingSlots();
+    return () => {
+      isCancelled = true;
+    };
+  }, [showAddForm, walkInDate, walkInServiceIds]);
+
   // Add Walk-in / Manual Booking
   const handleAddWalkIn = async (e) => {
     e.preventDefault();
@@ -738,9 +782,10 @@ function Appts() {
       d(ui.actions.setMsg({ type: 'error', text: 'Please select at least one service' }));
       return;
     }
-
-    const [h, m] = walkInTime.split(':');
-    const startMin = parseInt(h, 10) * 60 + parseInt(m, 10);
+    if (walkInStartMin === null || walkInStartMin === undefined) {
+      d(ui.actions.setMsg({ type: 'error', text: 'Please select an available time slot' }));
+      return;
+    }
 
     try {
       await api.post('/barber/appointments', {
@@ -748,13 +793,14 @@ function Appts() {
         serviceIds: walkInServiceIds,
         serviceId: walkInServiceIds[0],
         date: walkInDate,
-        startMin,
+        startMin: walkInStartMin,
         staffName: walkInStaff || undefined
       });
       d(ui.actions.setMsg({ type: 'ok', text: 'Walk-in appointment scheduled successfully!' }));
       setShowAddForm(false);
       setWalkInServiceIds([]);
       setWalkInCustId('');
+      setWalkInStartMin(null);
       refreshAll();
     } catch (err) {
       d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Booking conflict or error' }));
@@ -776,137 +822,218 @@ function Appts() {
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => setShowAddForm(true)}
             className="btn-brand"
           >
-            {showAddForm ? <XCircle className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            <span>{showAddForm ? 'Close Form' : 'New Walk-In Booking'}</span>
+            <Plus className="w-4 h-4" />
+            <span>New Walk-In Booking</span>
           </button>
         </div>
       }
     >
-      {/* Walk-in Form Collapsible Card with Multi-Service Selection & Duration Calculation */}
+      {/* ──────── WALK-IN BOOKING MODAL (WITH REMAINING SLOTS ONLY) ──────── */}
       {showAddForm && (
-        <form
-          onSubmit={handleAddWalkIn}
-          className="card border-amber-200 bg-amber-50/20 p-5 space-y-4 animate-in fade-in duration-200"
-        >
-          <div className="flex items-center justify-between pb-2 border-b border-amber-100">
-            <h3 className="font-bold text-stone-900 text-sm flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-amber-600" />
-              <span>Schedule Walk-In / Manual Appointment</span>
-            </h3>
-            <span className="text-xs text-stone-500">* All fields required</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Client selection */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-700">Client *</label>
-              <select
-                required
-                className="inp"
-                value={walkInCustId}
-                onChange={(e) => setWalkInCustId(e.target.value)}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-stone-950/60 backdrop-blur-xs animate-in fade-in duration-150"
+            onClick={() => setShowAddForm(false)}
+          />
+          <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-stone-200/90 z-10 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-stone-100 bg-stone-50/70 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
+                  <Scissors className="w-5 h-5 rotate-45" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-stone-900">New Walk-In Booking</h3>
+                  <p className="text-xs text-stone-500">
+                    Schedule client with real-time remaining time slots
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
               >
-                <option value="">Select Client</option>
-                {custs.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name} ({c.mobile})
-                  </option>
-                ))}
-              </select>
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Date */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-700">Date *</label>
-              <input
-                type="date"
-                required
-                className="inp"
-                value={walkInDate}
-                onChange={(e) => setWalkInDate(e.target.value)}
-              />
-            </div>
+            {/* Modal Form Body */}
+            <form onSubmit={handleAddWalkIn} className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Client selection */}
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-semibold text-stone-700 flex items-center justify-between">
+                    <span>Select Client <span className="text-red-500">*</span></span>
+                    <span className="text-[10px] text-stone-400 font-normal">
+                      Registered clients list ({custs.length})
+                    </span>
+                  </label>
+                  <select
+                    required
+                    className="inp"
+                    value={walkInCustId}
+                    onChange={(e) => setWalkInCustId(e.target.value)}
+                  >
+                    <option value="">-- Choose Client --</option>
+                    {custs.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.name} ({c.mobile})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Start Time */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-700">Start Time *</label>
-              <input
-                type="time"
-                required
-                className="inp"
-                value={walkInTime}
-                onChange={(e) => setWalkInTime(e.target.value)}
-              />
-            </div>
+                {/* Date */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-stone-700">Date <span className="text-red-500">*</span></label>
+                  <input
+                    type="date"
+                    required
+                    className="inp"
+                    value={walkInDate}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setWalkInDate(e.target.value)}
+                  />
+                </div>
 
-            {/* Optional Staff */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-700">Assigned Stylist / Staff</label>
-              <input
-                type="text"
-                placeholder="e.g. Master Barber Alex"
-                className="inp"
-                value={walkInStaff}
-                onChange={(e) => setWalkInStaff(e.target.value)}
-              />
-            </div>
-          </div>
+                {/* Staff */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-stone-700">Stylist / Staff (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Master Barber Alex"
+                    className="inp"
+                    value={walkInStaff}
+                    onChange={(e) => setWalkInStaff(e.target.value)}
+                  />
+                </div>
+              </div>
 
-          {/* Multi-Service Selector with Duration Calculation */}
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-stone-700">
-                Select Services (Multi-select) *
-              </label>
-              {selectedWalkInSvcs.length > 0 && (
-                <span className="text-xs font-bold text-amber-800 bg-amber-100/70 px-2.5 py-0.5 rounded-md">
-                  {selectedWalkInSvcs.length} selected • ⏱️ {walkInTotalDuration} mins approx • Total: ₹{walkInTotalPrice}
-                </span>
-              )}
-            </div>
+              {/* Service Selection */}
+              <div className="space-y-2 pt-1 border-t border-stone-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-stone-700">
+                    Select Services (Multi-select) <span className="text-red-500">*</span>
+                  </label>
+                  {selectedWalkInSvcs.length > 0 && (
+                    <span className="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-lg">
+                      {selectedWalkInSvcs.length} selected • ⏱️ {walkInTotalDuration}m • ₹{walkInTotalPrice}
+                    </span>
+                  )}
+                </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {svcs.map((s) => {
-                const isChecked = walkInServiceIds.includes(s._id);
-                return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
+                  {svcs.map((s) => {
+                    const isChecked = walkInServiceIds.includes(s._id);
+                    return (
+                      <button
+                        type="button"
+                        key={s._id}
+                        onClick={() => toggleWalkInService(s._id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-xs ${isChecked
+                            ? 'border-amber-600 bg-amber-50/80 text-amber-950 font-bold ring-1 ring-amber-600/50'
+                            : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+                          }`}
+                      >
+                        <div className="min-w-0">
+                          <span className="block truncate text-xs">{s.name}</span>
+                          <span className="text-[10px] text-stone-400 font-normal block">
+                            ⏱️ {s.duration}m • ₹{s.price}
+                          </span>
+                        </div>
+                        {isChecked && <Check className="w-4 h-4 text-amber-600 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ──────── REMAINING SLOTS SELECTOR ──────── */}
+              <div className="space-y-2 pt-2 border-t border-stone-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-stone-800 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Remaining Available Slots (Start Time) <span className="text-red-500">*</span></span>
+                  </label>
+                  {availableSlots.length > 0 && (
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      {availableSlots.length} available slot{availableSlots.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                {walkInServiceIds.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-stone-50 border border-dashed border-stone-200 text-center text-xs text-stone-500">
+                    👈 Please select at least one service above to compute duration and view remaining available slots.
+                  </div>
+                ) : slotsLoading ? (
+                  <div className="p-6 rounded-xl bg-stone-50 border border-stone-200 text-center space-y-2">
+                    <RefreshCw className="w-5 h-5 text-amber-600 mx-auto animate-spin" />
+                    <p className="text-xs text-stone-500 font-medium">Checking remaining available slots...</p>
+                  </div>
+                ) : availableSlots.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-center text-xs text-red-700 space-y-1">
+                    <p className="font-bold">No remaining slots available for {walkInTotalDuration} mins on {walkInDate}</p>
+                    <p className="text-[11px] text-red-600">All slots are either booked or past. Please choose a different date.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-44 overflow-y-auto pr-1">
+                    {availableSlots.map((slot) => {
+                      const isSelected = walkInStartMin === slot.startMin;
+                      return (
+                        <button
+                          type="button"
+                          key={slot.startMin}
+                          onClick={() => setWalkInStartMin(slot.startMin)}
+                          className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all text-center ${isSelected
+                              ? 'bg-amber-600 text-white border-amber-600 shadow-sm shadow-amber-600/30 ring-2 ring-amber-600/30'
+                              : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200 hover:border-stone-300'
+                            }`}
+                        >
+                          <span>{fmt(slot.startMin)}</span>
+                          <span className={`block text-[9px] font-normal ${isSelected ? 'text-amber-100' : 'text-stone-400'}`}>
+                            until {fmt(slot.endMin)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-between pt-3 border-t border-stone-100">
+                <div className="text-xs text-stone-500">
+                  {walkInStartMin !== null && (
+                    <span>
+                      Selected Time: <b className="text-stone-900">{fmt(walkInStartMin)} – {fmt(walkInStartMin + walkInTotalDuration)}</b>
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    key={s._id}
-                    onClick={() => toggleWalkInService(s._id)}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-xs ${isChecked
-                      ? 'border-amber-600 bg-amber-50 text-amber-950 font-bold ring-1 ring-amber-600/50'
-                      : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
-                      }`}
+                    className="btn-o"
+                    onClick={() => setShowAddForm(false)}
                   >
-                    <div>
-                      <span className="block truncate">{s.name}</span>
-                      <span className="text-[10px] text-stone-400 font-normal">
-                        ⏱️ {s.duration}m • ₹{s.price}
-                      </span>
-                    </div>
-                    {isChecked && <Check className="w-4 h-4 text-amber-600 shrink-0" />}
+                    Cancel
                   </button>
-                );
-              })}
-            </div>
+                  <button
+                    type="submit"
+                    disabled={!walkInCustId || walkInServiceIds.length === 0 || walkInStartMin === null}
+                    className="btn-brand disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span>Confirm Booking (₹{walkInTotalPrice})</span>
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-amber-100">
-            <button
-              type="button"
-              className="btn-o"
-              onClick={() => setShowAddForm(false)}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn-brand">
-              <span>Schedule Walk-In ({walkInTotalDuration}m • ₹{walkInTotalPrice})</span>
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* Main Tabs Header: Table List View vs Calendar View */}
@@ -2110,6 +2237,592 @@ function StoreAndProfile() {
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   CLIENT DIRECTORY PAGE — Register Modal, Paginated Table, Ledger View
+   ═══════════════════════════════════════════════════════════════════════ */
+function ClientsPage() {
+  const d = useDispatch();
+  const [clients, setClients] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [limit] = useState(10);
+  const [search, setSearch] = useState('');
+  const [searchDebounced, setSearchDebounced] = useState('');
+
+  // Modal states
+  const [showRegister, setShowRegister] = useState(false);
+  const [regForm, setRegForm] = useState({ name: '', mobile: '', email: '', notes: '' });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [ledgerClient, setLedgerClient] = useState(null);
+  const [ledgerData, setLedgerData] = useState(null);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setSearchDebounced(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Fetch clients (paginated)
+  const fetchClients = useCallback(async () => {
+    try {
+      const res = await api.get('/barber/customers-paginated', {
+        params: { page, limit, search: searchDebounced },
+        skipGlobalLoader: true
+      });
+      setClients(res.data.customers || []);
+      setTotal(res.data.total || 0);
+      setTotalPages(res.data.totalPages || 1);
+    } catch {
+      d(ui.actions.setMsg({ type: 'error', text: 'Failed to load clients' }));
+    }
+  }, [page, limit, searchDebounced, d]);
+
+  useEffect(() => { fetchClients(); }, [fetchClients]);
+
+  // Reset page when searching
+  useEffect(() => { setPage(1); }, [searchDebounced]);
+
+  // Register new client
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/barber/customers', regForm);
+      d(ui.actions.setMsg({ type: 'ok', text: `${regForm.name} registered successfully!` }));
+      setRegForm({ name: '', mobile: '', email: '', notes: '' });
+      setShowRegister(false);
+      fetchClients();
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Registration failed' }));
+    }
+  };
+
+  // Delete client
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await api.delete(`/barber/customers/${deleteTarget}`);
+      d(ui.actions.setMsg({ type: 'ok', text: 'Client removed successfully' }));
+      fetchClients();
+    } catch {
+      d(ui.actions.setMsg({ type: 'error', text: 'Delete failed' }));
+    }
+    setDeleteTarget(null);
+  };
+
+  // View ledger
+  const openLedger = async (clientId) => {
+    setLedgerClient(clientId);
+    setLedgerLoading(true);
+    try {
+      const res = await api.get(`/barber/customers/${clientId}/ledger`);
+      setLedgerData(res.data);
+    } catch {
+      d(ui.actions.setMsg({ type: 'error', text: 'Could not load client ledger' }));
+      setLedgerClient(null);
+    }
+    setLedgerLoading(false);
+  };
+
+  const closeLedger = () => { setLedgerClient(null); setLedgerData(null); };
+
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '–';
+  const fmtTime = (m) => { if (!m && m !== 0) return '–'; const h = Math.floor(m / 60), mn = m % 60, ap = h >= 12 ? 'PM' : 'AM'; return `${h % 12 || 12}:${String(mn).padStart(2, '0')} ${ap}`; };
+
+  const statusColor = (s) => {
+    const map = { pending: 'bg-amber-100 text-amber-800', confirmed: 'bg-blue-100 text-blue-800', in_progress: 'bg-indigo-100 text-indigo-800', completed: 'bg-emerald-100 text-emerald-800', cancelled: 'bg-red-100 text-red-800', rejected: 'bg-red-100 text-red-800', no_show: 'bg-purple-100 text-purple-800' };
+    return map[s] || 'bg-stone-100 text-stone-700';
+  };
+
+  // Pagination range
+  const pageRange = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  };
+
+  return (
+    <Shell
+      title="Client Directory"
+      subtitle="Manage client records, view ledger history & transaction details"
+      links={barberLinks}
+      actions={
+        <div className="flex items-center gap-2">
+          <button onClick={fetchClients} className="btn-o p-2.5 text-stone-600 hover:text-stone-900" title="Refresh">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button onClick={() => setShowRegister(true)} className="btn-brand">
+            <UserPlus className="w-4 h-4" />
+            <span>Register Client</span>
+          </button>
+        </div>
+      }
+    >
+      {/* Search Bar */}
+      <div className="card p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              className="inp pl-10 pr-9"
+              placeholder="Search by name, mobile, or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <span className="text-xs font-medium text-stone-500 shrink-0">
+            {total} client{total !== 1 ? 's' : ''} registered
+          </span>
+        </div>
+      </div>
+
+      {/* Clients Table — Desktop */}
+      {clients.length === 0 ? (
+        <div className="card text-center py-12 px-4 space-y-2">
+          <div className="w-12 h-12 rounded-full bg-stone-100 text-stone-400 mx-auto flex items-center justify-center">
+            <Users className="w-6 h-6" />
+          </div>
+          <p className="font-semibold text-stone-800 text-sm">No clients found</p>
+          <p className="text-xs text-stone-500 max-w-sm mx-auto">
+            {search ? `No results for "${search}". Try a different search.` : 'Register your first client to get started.'}
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Mobile Cards */}
+          <div className="grid grid-cols-1 gap-3 md:hidden">
+            {clients.map((c) => (
+              <div key={c._id} className="card space-y-3">
+                <div className="flex items-start justify-between gap-2 border-b border-stone-100 pb-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                      {c.name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="font-bold text-stone-900 block text-sm truncate">{c.name}</span>
+                      <span className="text-xs text-stone-500 flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> {c.mobile}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => openLedger(c._id)}
+                      className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors"
+                      title="View Ledger"
+                    >
+                      <Wallet className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(c._id)}
+                      className="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-stone-400 block">Email</span>
+                    <span className="font-medium text-stone-800 truncate block">{c.email || '–'}</span>
+                  </div>
+                  <div>
+                    <span className="text-stone-400 block">Loyalty Points</span>
+                    <span className="font-medium text-stone-800">{c.loyaltyPoints || 0}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-stone-400 block">Notes</span>
+                    <span className="font-medium text-stone-700 line-clamp-1">{c.notes || '–'}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden md:block card p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-stone-50/80 text-stone-500 border-b border-stone-200/80 text-xs uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th className="py-3 px-4">Client</th>
+                    <th className="py-3 px-4">Mobile</th>
+                    <th className="py-3 px-4">Email</th>
+                    <th className="py-3 px-4">Loyalty Pts</th>
+                    <th className="py-3 px-4">Notes</th>
+                    <th className="py-3 px-4">Registered</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {clients.map((c) => (
+                    <tr key={c._id} className="hover:bg-stone-50/60 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                            {c.name?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <span className="font-semibold text-stone-900">{c.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-stone-600">{c.mobile}</td>
+                      <td className="py-3 px-4 text-stone-600">{c.email || '–'}</td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-800 rounded-full text-xs font-bold">
+                          <Sparkles className="w-3 h-3" /> {c.loyaltyPoints || 0}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-stone-500 text-xs max-w-[160px] truncate">{c.notes || '–'}</td>
+                      <td className="py-3 px-4 text-stone-500 text-xs">{fmtDate(c.createdAt)}</td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openLedger(c._id)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 border border-amber-200 transition-colors"
+                            title="View Ledger"
+                          >
+                            <Wallet className="w-3.5 h-3.5" />
+                            <span>Ledger</span>
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(c._id)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-stone-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer */}
+            <div className="py-3 px-4 bg-stone-50/50 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-stone-500">
+              <span>
+                Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total} clients
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="p-1.5 rounded-lg hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {pageRange().map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${p === page
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'hover:bg-stone-200 text-stone-600'
+                      }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="p-1.5 rounded-lg hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Pagination */}
+          <div className="md:hidden flex items-center justify-between px-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="btn-o text-xs disabled:opacity-40"
+            >
+              <ChevronLeft className="w-4 h-4" /> Previous
+            </button>
+            <span className="text-xs text-stone-500">Page {page} of {totalPages}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="btn-o text-xs disabled:opacity-40"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ──────── REGISTER CLIENT MODAL ──────── */}
+      {showRegister && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-xs animate-in fade-in duration-150" onClick={() => setShowRegister(false)} />
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-float border border-stone-200/90 z-10 animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-stone-100 bg-stone-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-stone-900">Register New Client</h3>
+                  <p className="text-xs text-stone-500">Add a new client to your directory</p>
+                </div>
+              </div>
+              <button onClick={() => setShowRegister(false)} className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleRegister} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-stone-700">Full Name <span className="text-red-500">*</span></label>
+                  <input
+                    className="inp"
+                    placeholder="e.g. Amit Sharma"
+                    required
+                    value={regForm.name}
+                    onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-stone-700">Mobile Number <span className="text-red-500">*</span></label>
+                  <input
+                    className="inp"
+                    placeholder="e.g. 9876543210"
+                    required
+                    value={regForm.mobile}
+                    onChange={(e) => setRegForm({ ...regForm, mobile: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-semibold text-stone-700">Email Address</label>
+                  <input
+                    className="inp"
+                    type="email"
+                    placeholder="client@example.com"
+                    value={regForm.email}
+                    onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-semibold text-stone-700">Preferences & Notes</label>
+                  <textarea
+                    className="inp min-h-[72px] resize-none"
+                    placeholder="e.g. Prefers fade cut, allergic to specific products"
+                    value={regForm.notes}
+                    onChange={(e) => setRegForm({ ...regForm, notes: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-stone-100">
+                <button type="button" className="btn-o" onClick={() => setShowRegister(false)}>Cancel</button>
+                <button type="submit" className="btn-brand">
+                  <UserPlus className="w-4 h-4" />
+                  <span>Register Client</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ──────── LEDGER VIEW MODAL (SLIDE-OVER) ──────── */}
+      {ledgerClient && (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-end">
+          <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-xs animate-in fade-in duration-150" onClick={closeLedger} />
+          <div className="relative w-full max-w-2xl bg-white shadow-2xl z-10 animate-in slide-in-from-right duration-200 flex flex-col overflow-hidden">
+            {ledgerLoading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center space-y-3">
+                  <RefreshCw className="w-8 h-8 text-amber-600 mx-auto animate-spin" />
+                  <p className="text-sm text-stone-500">Loading ledger...</p>
+                </div>
+              </div>
+            ) : ledgerData ? (
+              <>
+                {/* Ledger Header */}
+                <div className="p-5 border-b border-stone-200 bg-stone-50/50 shrink-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center text-lg font-bold shrink-0">
+                        {ledgerData.customer?.name?.[0]?.toUpperCase() || '?'}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-lg font-bold text-stone-900 truncate">{ledgerData.customer?.name}</h3>
+                        <div className="flex items-center gap-3 text-xs text-stone-500 mt-0.5 flex-wrap">
+                          <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {ledgerData.customer?.mobile}</span>
+                          {ledgerData.customer?.email && <span>{ledgerData.customer.email}</span>}
+                        </div>
+                        {ledgerData.customer?.notes && (
+                          <p className="text-xs text-stone-400 mt-1 line-clamp-1">📝 {ledgerData.customer.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                    <button onClick={closeLedger} className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors shrink-0">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stats Summary Cards */}
+                <div className="p-5 border-b border-stone-200 shrink-0">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-blue-50 rounded-xl p-3 text-center">
+                      <p className="text-lg font-bold text-blue-800">{ledgerData.stats?.totalVisits || 0}</p>
+                      <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Total Visits</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                      <p className="text-lg font-bold text-emerald-800">{ledgerData.stats?.completedVisits || 0}</p>
+                      <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Completed</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-xl p-3 text-center">
+                      <p className="text-lg font-bold text-amber-800">₹{ledgerData.stats?.totalSpent || 0}</p>
+                      <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider">Total Spent</p>
+                    </div>
+                    <div className="bg-purple-50 rounded-xl p-3 text-center">
+                      <p className="text-lg font-bold text-purple-800">₹{ledgerData.stats?.avgSpendPerVisit || 0}</p>
+                      <p className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider">Avg / Visit</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-3 text-xs text-stone-500">
+                    <span>Loyalty Points: <b className="text-amber-700">{ledgerData.customer?.loyaltyPoints || 0}</b></span>
+                    <span>Last Visit: <b className="text-stone-700">{fmtDate(ledgerData.stats?.lastVisitDate)}</b></span>
+                    {(ledgerData.stats?.cancelledCount || 0) > 0 && (
+                      <span className="text-red-600">Cancelled: <b>{ledgerData.stats.cancelledCount}</b></span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scrollable Transactions */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                  {/* Appointments History */}
+                  <div>
+                    <h4 className="text-sm font-bold text-stone-900 mb-3 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-amber-600" />
+                      Appointment History ({ledgerData.appointments?.length || 0})
+                    </h4>
+                    {(!ledgerData.appointments || ledgerData.appointments.length === 0) ? (
+                      <div className="text-center py-6 text-xs text-stone-400 bg-stone-50 rounded-xl">
+                        No appointments yet
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {ledgerData.appointments.map((a) => (
+                          <div key={a._id} className="border border-stone-200 rounded-xl p-3 hover:bg-stone-50/50 transition-colors">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-stone-900 text-sm">{a.serviceName || 'Service'}</span>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusColor(a.status)}`}>
+                                    {(a.status || 'unknown').replace('_', ' ').toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-stone-500 flex-wrap">
+                                  <span className="flex items-center gap-1">📅 {a.date}</span>
+                                  <span className="flex items-center gap-1">⏰ {fmtTime(a.startMin)} – {fmtTime(a.endMin)}</span>
+                                  {a.duration && <span>{a.duration}m</span>}
+                                  {a.staffName && <span>✂️ {a.staffName}</span>}
+                                </div>
+                                {a.services && a.services.length > 1 && (
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {a.services.map((s, i) => (
+                                      <span key={i} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-md font-medium">
+                                        {s.name} (₹{s.price})
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <span className="font-bold text-amber-700 text-sm shrink-0">₹{a.price || 0}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Invoices / Payment History */}
+                  <div>
+                    <h4 className="text-sm font-bold text-stone-900 mb-3 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-emerald-600" />
+                      Payment History ({ledgerData.invoices?.length || 0})
+                    </h4>
+                    {(!ledgerData.invoices || ledgerData.invoices.length === 0) ? (
+                      <div className="text-center py-6 text-xs text-stone-400 bg-stone-50 rounded-xl">
+                        No invoices yet
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {ledgerData.invoices.map((inv) => (
+                          <div key={inv._id} className="border border-stone-200 rounded-xl p-3 hover:bg-stone-50/50 transition-colors">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {inv.items?.map((it, i) => (
+                                    <span key={i} className="text-xs font-medium text-stone-800">{it.name} (₹{it.price})</span>
+                                  ))}
+                                </div>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-stone-500 flex-wrap">
+                                  <span>📅 {fmtDate(inv.createdAt)}</span>
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 text-stone-600 text-[10px] font-semibold uppercase">
+                                    {inv.method || 'cash'}
+                                  </span>
+                                  {inv.discount > 0 && <span className="text-emerald-600">Discount: ₹{inv.discount}</span>}
+                                  {inv.taxPct > 0 && <span>Tax: {inv.taxPct}%</span>}
+                                </div>
+                              </div>
+                              <span className="font-bold text-emerald-700 text-sm shrink-0">₹{Math.round(inv.total || 0)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Ledger Footer */}
+                <div className="p-4 border-t border-stone-200 bg-stone-50/50 shrink-0 flex items-center justify-between">
+                  <span className="text-xs text-stone-500">Client since {fmtDate(ledgerData.customer?.createdAt)}</span>
+                  <button onClick={closeLedger} className="btn-o text-xs">Close</button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        type="danger"
+        title="Remove Client"
+        message="Are you sure you want to remove this client? Their booking history will be preserved."
+        confirmText="Yes, Remove"
+        cancelText="Cancel"
+        onConfirm={executeDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
+    </Shell>
+  );
+}
+
 export default function Barber() {
   const d = useDispatch();
   useEffect(() => {
@@ -2121,35 +2834,7 @@ export default function Barber() {
       <Route index element={<Home />} />
       <Route path="appointments" element={<Appts />} />
       <Route path="store" element={<StoreAndProfile />} />
-      <Route
-        path="customers"
-        element={
-          <Shell
-            title="Client Directory"
-            subtitle="Manage client contact records, visit history, and notes"
-            links={barberLinks}
-          >
-            <Crud
-              k="customers"
-              url="/barber/customers"
-              title="Clients"
-              newItemLabel="Register Client"
-              fields={[
-                { n: 'name', l: 'Full Name', req: 1, placeholder: 'e.g. Amit Sharma' },
-                { n: 'mobile', l: 'Mobile Number', req: 1, placeholder: 'e.g. 9876543210' },
-                { n: 'email', l: 'Email Address', placeholder: 'client@example.com' },
-                { n: 'notes', l: 'Preferences & Notes', placeholder: 'e.g. Prefers fade cut' }
-              ]}
-              cols={[
-                { n: 'name', l: 'Client Name' },
-                { n: 'mobile', l: 'Mobile' },
-                { n: 'loyaltyPoints', l: 'Loyalty Points' },
-                { n: 'notes', l: 'Notes' }
-              ]}
-            />
-          </Shell>
-        }
-      />
+      <Route path="customers" element={<ClientsPage />} />
       <Route
         path="services"
         element={
