@@ -2387,7 +2387,7 @@ function StoreAndProfile() {
             }`}
         >
           <Building className="w-4 h-4" />
-          <span>Barbershop Details & Hours</span>
+          <span>Shop Details</span>
         </button>
 
         <button
@@ -2398,7 +2398,7 @@ function StoreAndProfile() {
             }`}
         >
           <User className="w-4 h-4" />
-          <span>Barber Personal Profile</span>
+          <span>Profile</span>
         </button>
 
         <button
@@ -2409,7 +2409,7 @@ function StoreAndProfile() {
             }`}
         >
           <Wallet className="w-4 h-4" />
-          <span>UPI & Online Payments</span>
+          <span>Payments</span>
         </button>
 
         <button
@@ -2421,7 +2421,7 @@ function StoreAndProfile() {
             }`}
         >
           <KeyRound className="w-3.5 h-3.5" />
-          <span>Change Password</span>
+          <span>Password</span>
         </button>
       </div>
 
@@ -2841,11 +2841,10 @@ function StoreAndProfile() {
                 <div className="flex items-center gap-2">
                   <Wallet className="w-5 h-5 text-amber-600" />
                   <h3 className="font-bold text-base text-stone-900">Accept Online UPI & App Payments</h3>
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                    shopForm.acceptOnlinePayment
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-stone-200 text-stone-600 border border-stone-300'
-                  }`}>
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${shopForm.acceptOnlinePayment
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                    : 'bg-stone-200 text-stone-600 border border-stone-300'
+                    }`}>
                     {shopForm.acceptOnlinePayment ? 'Active' : 'Disabled'}
                   </span>
                 </div>
@@ -3251,11 +3250,11 @@ function StoreAndProfile() {
                   setPwForm({ newPassword: '', confirm: '' });
                 }}
               >
-                Back to Store Settings
+                Back
               </button>
               <button type="submit" className="btn-brand px-6 py-2 flex items-center gap-2">
                 <Save className="w-4 h-4" />
-                <span>Save New Password</span>
+                <span>Save</span>
               </button>
             </div>
           </div>
