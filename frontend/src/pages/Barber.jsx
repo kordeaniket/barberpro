@@ -71,7 +71,8 @@ import {
   Download,
   LogOut,
   QrCode,
-  Smartphone
+  Smartphone,
+  Upload
 } from 'lucide-react';
 
 const barberLinks = [
@@ -2102,6 +2103,42 @@ const DAYS = [
   { idx: 6, label: 'Sat' }
 ];
 
+const processImageFile = (file, maxWidth = 600, maxHeight = 600, quality = 0.88) => {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      return reject(new Error('Please select a valid image file (PNG, JPG, WEBP, etc.)'));
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const format = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        resolve(canvas.toDataURL(format, quality));
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Failed to read file from system'));
+    reader.readAsDataURL(file);
+  });
+};
+
 function StoreAndProfile() {
   const d = useDispatch();
   const nav = useNavigate();
@@ -2137,6 +2174,71 @@ function StoreAndProfile() {
   const [qrImgError, setQrImgError] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Device upload states
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [showLogoUrlInput, setShowLogoUrlInput] = useState(false);
+  const [logoFileName, setLogoFileName] = useState('');
+
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [showAvatarUrlInput, setShowAvatarUrlInput] = useState(false);
+  const [avatarFileName, setAvatarFileName] = useState('');
+
+  const [uploadingQr, setUploadingQr] = useState(false);
+  const [qrFileName, setQrFileName] = useState('');
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    setLogoImgError(false);
+    try {
+      setLogoFileName(file.name);
+      const dataUrl = await processImageFile(file, 600, 600, 0.88);
+      setShopForm((prev) => ({ ...prev, logoUrl: dataUrl }));
+      d(ui.actions.setMsg({ type: 'ok', text: `Logo uploaded from device (${file.name}). Click "Save Store Settings" to save.` }));
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.message || 'Failed to upload logo' }));
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      setAvatarFileName(file.name);
+      const dataUrl = await processImageFile(file, 400, 400, 0.88);
+      setUserForm((prev) => ({ ...prev, avatarUrl: dataUrl }));
+      d(ui.actions.setMsg({ type: 'ok', text: `Profile photo uploaded from device (${file.name}). Click "Save Profile" to save.` }));
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.message || 'Failed to upload avatar' }));
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleQrUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingQr(true);
+    setQrImgError(false);
+    try {
+      setQrFileName(file.name);
+      const dataUrl = await processImageFile(file, 800, 800, 0.90);
+      setShopForm((prev) => ({ ...prev, upiQrUrl: dataUrl }));
+      d(ui.actions.setMsg({ type: 'ok', text: `QR Code uploaded from device (${file.name}). Click "Save Payment Settings" to save.` }));
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.message || 'Failed to upload QR code' }));
+    } finally {
+      setUploadingQr(false);
+      e.target.value = '';
+    }
+  };
 
   // Load shop and profile data
   useEffect(() => {
@@ -2338,38 +2440,107 @@ function StoreAndProfile() {
               <span>Store Brand & Logo</span>
             </h3>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="w-20 h-20 rounded-2xl bg-stone-100 border-2 border-dashed border-stone-300 flex items-center justify-center overflow-hidden shrink-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 p-4 bg-stone-50/70 rounded-2xl border border-stone-200">
+              {/* Logo Preview Box */}
+              <div className="relative group w-24 h-24 rounded-2xl bg-white border-2 border-dashed border-stone-300 hover:border-amber-500 flex items-center justify-center overflow-hidden shrink-0 shadow-xs transition-colors">
                 {shopForm.logoUrl && !logoImgError ? (
                   <img
                     src={shopForm.logoUrl}
                     alt="Store Logo"
                     onError={() => setLogoImgError(true)}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain p-1"
                   />
                 ) : (
                   <div className="text-center p-2 text-stone-400">
-                    <Scissors className="w-6 h-6 mx-auto mb-1 opacity-50" />
-                    <span className="text-[10px] block">No logo</span>
+                    <Scissors className="w-7 h-7 mx-auto mb-1 opacity-40" />
+                    <span className="text-[10px] font-medium block">No logo</span>
                   </div>
+                )}
+                {shopForm.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShopForm({ ...shopForm, logoUrl: '' });
+                      setLogoFileName('');
+                    }}
+                    title="Remove logo"
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-stone-900/80 text-white flex items-center justify-center hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
 
-              <div className="flex-1 w-full space-y-1.5">
-                <label className="text-xs font-semibold text-stone-600">Logo Image URL</label>
-                <input
-                  type="url"
-                  className="inp"
-                  placeholder="https://example.com/logo.png"
-                  value={shopForm.logoUrl}
-                  onChange={(e) => {
-                    setLogoImgError(false);
-                    setShopForm({ ...shopForm, logoUrl: e.target.value });
-                  }}
-                />
-                <p className="text-[11px] text-stone-500">
-                  Provide a direct web image link (PNG, JPG, SVG). Displayed on your public booking page.
-                </p>
+              {/* Upload controls */}
+              <div className="flex-1 w-full space-y-2.5">
+                <div>
+                  <h4 className="font-bold text-stone-900 text-sm">Upload Barbershop Logo</h4>
+                  <p className="text-xs text-stone-500">
+                    Upload your shop logo directly from your computer, mobile, or system (PNG, JPG, SVG, WEBP).
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* File Upload Button from Device */}
+                  <label className="btn-brand py-2 px-4 text-xs cursor-pointer flex items-center gap-2 shadow-sm shadow-amber-600/20 hover:shadow-md transition-all active:scale-95">
+                    <Upload className="w-4 h-4" />
+                    <span>{uploadingLogo ? 'Processing Image...' : shopForm.logoUrl ? 'Change Logo from Device' : 'Upload from Device / System'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingLogo}
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {shopForm.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShopForm({ ...shopForm, logoUrl: '' });
+                        setLogoFileName('');
+                      }}
+                      className="btn-o text-xs py-2 px-3 text-red-600 hover:bg-red-50 border-red-200 flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowLogoUrlInput(!showLogoUrlInput)}
+                    className="text-xs text-stone-500 hover:text-amber-700 underline underline-offset-2 ml-auto"
+                  >
+                    {showLogoUrlInput ? 'Hide URL input' : 'Or enter image URL instead'}
+                  </button>
+                </div>
+
+                {logoFileName && (
+                  <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    <span>Selected file: {logoFileName}</span>
+                  </p>
+                )}
+
+                {/* Optional URL input toggle */}
+                {showLogoUrlInput && (
+                  <div className="pt-2 border-t border-stone-200/60 space-y-1 animate-in fade-in">
+                    <label className="text-[11px] font-semibold text-stone-600">Direct Image URL</label>
+                    <input
+                      type="url"
+                      className="inp text-xs py-1.5"
+                      placeholder="https://example.com/logo.png"
+                      value={shopForm.logoUrl}
+                      onChange={(e) => {
+                        setLogoImgError(false);
+                        setLogoFileName('');
+                        setShopForm({ ...shopForm, logoUrl: e.target.value });
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2594,14 +2765,55 @@ function StoreAndProfile() {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-stone-600">Avatar Image URL</label>
-                <input
-                  className="inp"
-                  placeholder="https://example.com/avatar.jpg"
-                  value={userForm.avatarUrl}
-                  onChange={(e) => setUserForm({ ...userForm, avatarUrl: e.target.value })}
-                />
+              <div className="space-y-1 sm:col-span-2">
+                <label className="text-xs font-semibold text-stone-600 block">Avatar / Profile Photo</label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="btn-brand py-1.5 px-3 text-xs cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{uploadingAvatar ? 'Uploading...' : userForm.avatarUrl ? 'Change Photo from Device' : 'Upload from Device / System'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingAvatar}
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  {userForm.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserForm({ ...userForm, avatarUrl: '' });
+                        setAvatarFileName('');
+                      }}
+                      className="btn-o text-xs py-1.5 px-3 text-red-600 hover:bg-red-50 border-red-200 flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowAvatarUrlInput(!showAvatarUrlInput)}
+                    className="text-xs text-stone-500 hover:text-amber-700 underline underline-offset-2 ml-auto"
+                  >
+                    {showAvatarUrlInput ? 'Hide URL' : 'Or use Image URL'}
+                  </button>
+                </div>
+                {avatarFileName && (
+                  <p className="text-[11px] text-emerald-700 font-medium">Selected: {avatarFileName}</p>
+                )}
+                {showAvatarUrlInput && (
+                  <input
+                    className="inp text-xs py-1.5 mt-1.5"
+                    placeholder="https://example.com/avatar.jpg"
+                    value={userForm.avatarUrl}
+                    onChange={(e) => {
+                      setAvatarFileName('');
+                      setUserForm({ ...userForm, avatarUrl: e.target.value });
+                    }}
+                  />
+                )}
               </div>
             </div>
 
@@ -2812,14 +3024,44 @@ function StoreAndProfile() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 min-w-[240px]">
+                    <td className="py-3.5 px-4 min-w-[260px] space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <label className="btn-brand py-1 px-2.5 text-[11px] cursor-pointer flex items-center gap-1.5 shrink-0">
+                          <Upload className="w-3 h-3" />
+                          <span>{uploadingQr ? 'Uploading...' : shopForm.upiQrUrl ? 'Change QR Image' : 'Upload QR Image'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={uploadingQr}
+                            onChange={handleQrUpload}
+                            className="hidden"
+                          />
+                        </label>
+                        {shopForm.upiQrUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShopForm({ ...shopForm, upiQrUrl: '' });
+                              setQrFileName('');
+                            }}
+                            className="text-stone-400 hover:text-red-600 p-1 rounded"
+                            title="Remove custom QR"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      {qrFileName && (
+                        <span className="text-[10px] text-emerald-700 block truncate">Selected: {qrFileName}</span>
+                      )}
                       <input
                         type="url"
-                        className="inp text-xs py-1.5"
-                        placeholder="https://example.com/my-shop-qr.png"
+                        className="inp text-[11px] py-1"
+                        placeholder="Or enter QR image direct link"
                         value={shopForm.upiQrUrl || ''}
                         onChange={(e) => {
                           setQrImgError(false);
+                          setQrFileName('');
                           setShopForm({ ...shopForm, upiQrUrl: e.target.value });
                         }}
                       />
