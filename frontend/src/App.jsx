@@ -10,7 +10,7 @@ import GlobalLoader from './components/GlobalLoader';
 const Guard = ({ role, children }) => {
   const u = useSelector((s) => s.auth.user);
   if (!u || u.role !== role) return <Navigate to="/login" />;
-  return u.mustChangePassword ? <ChangePassword /> : children;
+  return children;
 };
 
 export default function App() {

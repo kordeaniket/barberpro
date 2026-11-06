@@ -10,7 +10,6 @@ const auth = (...roles) => async (req, res, next) => {
     const u = await User.findById(p.id);
     if (!u || !u.active) return fail(res, 401, 'Account disabled');
     if (roles.length && !roles.includes(u.role)) return fail(res, 403, 'Forbidden');
-    if (u.mustChangePassword && !req.originalUrl.includes('change-password')) return fail(res, 403, 'Password change required', 'PASSWORD_CHANGE_REQUIRED');
     if (u.role !== 'superadmin') {
       const shop = await Shop.findById(u.shopId);
       if (!shop || shop.status !== 'active') return fail(res, 403, 'Shop is not active');

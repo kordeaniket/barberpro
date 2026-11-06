@@ -5,6 +5,9 @@ const err = (e) => e.response?.data?.message || e.message;
 function* login({ payload }) {
   try {
     const { data } = yield call(api.post, '/auth/login', payload);
+    if (data.user) {
+      data.user.mustChangePassword = false;
+    }
     saveSession(data);
     if (data.user?.shop?.shopCode) {
       localStorage.setItem('shopCode', data.user.shop.shopCode);

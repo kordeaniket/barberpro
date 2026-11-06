@@ -240,14 +240,14 @@ r.post('/shops', wrap(async (req, res) => {
   const ends = new Date(Date.now() + (plan?.cycle === 'trial' ? 14 : 30) * 864e5);
   const shop = await Shop.create({ ...pick(req.body, ['name', 'ownerName', 'mobile', 'email', 'address', 'city', 'openMin', 'closeMin', 'holidays']), planId: plan?._id, subscriptionEnds: ends, shopCode: rand(3).toUpperCase() });
   const temp = rand(4);
-  await User.create({ name: shop.ownerName, mobile: shop.mobile, email: shop.email, role: 'barber', shopId: shop._id, passwordHash: await bcrypt.hash(temp, 10), mustChangePassword: true });
+  await User.create({ name: shop.ownerName, mobile: shop.mobile, email: shop.email, role: 'barber', shopId: shop._id, passwordHash: await bcrypt.hash(temp, 10), mustChangePassword: false });
   const base = process.env.CLIENT_URL || 'http://localhost:5173';
   res.status(201).json({ shop, message: `Shop created. Login ${shop.mobile} / temp password ${temp} (shown once). Customer link: ${base}/s/${shop.shopCode}` });
 }));
 r.patch('/shops/:id', wrap(async (req, res) => res.json(await Shop.findByIdAndUpdate(req.params.id, pick(req.body, ['name', 'ownerName', 'email', 'address', 'city', 'status', 'planId', 'openMin', 'closeMin']), { new: true }))));
 r.post('/shops/:id/reset-password', wrap(async (req, res) => {
   const temp = rand(4);
-  await User.updateOne({ shopId: req.params.id, role: 'barber' }, { passwordHash: await bcrypt.hash(temp, 10), mustChangePassword: true });
+  await User.updateOne({ shopId: req.params.id, role: 'barber' }, { passwordHash: await bcrypt.hash(temp, 10), mustChangePassword: false });
   res.json({ message: 'New temporary password: ' + temp });
 }));
 

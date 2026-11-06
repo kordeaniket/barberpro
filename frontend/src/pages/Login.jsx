@@ -227,6 +227,9 @@ export default function Login() {
           {/* Login Form */}
           <form
             onSubmit={handleSubmit}
+            autoComplete="off"
+            data-lpignore="true"
+            data-form-type="other"
             className="space-y-4"
           >
 
@@ -391,6 +394,11 @@ export default function Login() {
 
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="bp_login_code"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-form-type="other"
+                  spellCheck="false"
                   placeholder="Enter your password"
                   className="w-full bg-stone-800/80 border border-stone-700 rounded-xl pl-10 pr-11 py-2.5 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all"
                   value={f.password}

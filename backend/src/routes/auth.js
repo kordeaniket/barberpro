@@ -20,7 +20,7 @@ const issue = async (u) => {
       mobile: u.mobile,
       role: u.role,
       shopId: u.shopId,
-      mustChangePassword: u.mustChangePassword,
+      mustChangePassword: false,
       shop
     }
   };
