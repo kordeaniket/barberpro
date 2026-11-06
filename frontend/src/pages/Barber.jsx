@@ -2387,7 +2387,7 @@ function StoreAndProfile() {
             }`}
         >
           <Building className="w-4 h-4" />
-          <span>Shop Details</span>
+          <span>Details</span>
         </button>
 
         <button
