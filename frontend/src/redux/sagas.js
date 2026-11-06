@@ -3,7 +3,14 @@ import api, { saveSession, clearSession } from '../api';
 import { auth, ui } from './slices';
 const err = (e) => e.response?.data?.message || e.message;
 function* login({ payload }) {
-  try { const { data } = yield call(api.post, '/auth/login', payload); saveSession(data); yield put(auth.actions.loginSuccess(data.user)); }
+  try {
+    const { data } = yield call(api.post, '/auth/login', payload);
+    saveSession(data);
+    if (data.user?.shop?.shopCode) {
+      localStorage.setItem('shopCode', data.user.shop.shopCode);
+    }
+    yield put(auth.actions.loginSuccess(data.user));
+  }
   catch (e) { yield put(auth.actions.loginFailure(err(e))); }
 }
 function* fetchData({ payload: { key, url } }) {

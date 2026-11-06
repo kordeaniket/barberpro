@@ -553,7 +553,16 @@ export default function Customer() {
   }, []);
 
   useEffect(() => {
-    const c = localStorage.getItem('shopCode');
+    let c = localStorage.getItem('shopCode');
+    if (!c) {
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        if (u?.shop?.shopCode) {
+          c = u.shop.shopCode;
+          localStorage.setItem('shopCode', c);
+        }
+      } catch (e) {}
+    }
     if (c) {
       setCode(c);
       api.get('/customer/public/shop/' + c).then((r) => {

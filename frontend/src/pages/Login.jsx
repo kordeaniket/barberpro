@@ -21,7 +21,11 @@ import {
   Mail,
   Building2,
   MessageCircle,
-  RefreshCw
+  RefreshCw,
+  ShieldCheck,
+  ShieldAlert,
+  Clock,
+  Check
 } from 'lucide-react';
 
 export default function Login() {
@@ -35,6 +39,10 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [mobileError, setMobileError] = useState('');
+
+  // Account Role Detection State (Super Admin, Barber, Client)
+  const [accountInfo, setAccountInfo] = useState(null);
+  const [checkingRole, setCheckingRole] = useState(false);
 
   // Shop Registration Modal State
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -114,7 +122,7 @@ export default function Login() {
     });
   };
 
-  // Mobile Number Validation
+  // Mobile Number Validation & Dynamic Role Detection
   const handleMobileChange = (e) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 10);
 
@@ -125,8 +133,26 @@ export default function Login() {
 
     if (value.length > 0 && value.length < 10) {
       setMobileError('Mobile number must be exactly 10 digits');
+      setAccountInfo(null);
     } else {
       setMobileError('');
+      if (value.length === 10) {
+        checkAccountRole(value);
+      } else {
+        setAccountInfo(null);
+      }
+    }
+  };
+
+  const checkAccountRole = async (mobileNum) => {
+    try {
+      setCheckingRole(true);
+      const res = await api.get(`/auth/lookup/${mobileNum}`, { skipGlobalLoader: true });
+      setAccountInfo(res.data);
+    } catch {
+      setAccountInfo(null);
+    } finally {
+      setCheckingRole(false);
     }
   };
 
@@ -134,6 +160,7 @@ export default function Login() {
   const fillAccount = (mobile, password) => {
     setF({ mobile, password });
     setMobileError('');
+    checkAccountRole(mobile);
   };
 
   // Redirect Based on User Role
@@ -191,8 +218,8 @@ export default function Login() {
               Barber<span className="text-amber-500">Pro</span>
             </h1>
 
-            <p className="text-sm text-stone-400">
-              Multi-Tenant Salon & Barber Management
+            <p className="text-xs sm:text-sm text-stone-400">
+              Single Login for Super Admin, Barbers & Clients
             </p>
 
           </div>
@@ -252,6 +279,106 @@ export default function Login() {
                 </span>
 
               </div>
+
+              {/* Detected Account Type Badge / Indicator */}
+              {checkingRole && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-stone-800/60 border border-stone-700/60 text-stone-300 text-xs animate-in fade-in">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-500" />
+                  <span>Checking account role for {f.mobile}...</span>
+                </div>
+              )}
+
+              {!checkingRole && accountInfo?.exists && (
+                <div className={`flex items-center gap-2.5 p-3 rounded-2xl border text-xs animate-in fade-in zoom-in-95 ${
+                  accountInfo.role === 'superadmin'
+                    ? 'bg-gradient-to-r from-purple-950/70 to-purple-900/30 border-purple-500/50 text-purple-200 shadow-sm shadow-purple-900/30'
+                    : accountInfo.role === 'barber'
+                      ? 'bg-gradient-to-r from-amber-950/70 to-amber-900/30 border-amber-500/50 text-amber-200 shadow-sm shadow-amber-900/30'
+                      : 'bg-gradient-to-r from-blue-950/70 to-blue-900/30 border-blue-500/50 text-blue-200 shadow-sm shadow-blue-900/30'
+                }`}>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                    accountInfo.role === 'superadmin'
+                      ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
+                      : accountInfo.role === 'barber'
+                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                        : 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                  }`}>
+                    {accountInfo.role === 'superadmin' ? (
+                      <ShieldCheck className="w-4 h-4" />
+                    ) : accountInfo.role === 'barber' ? (
+                      <Scissors className="w-4 h-4 rotate-45" />
+                    ) : (
+                      <User className="w-4 h-4" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-white text-xs">
+                        {accountInfo.role === 'superadmin'
+                          ? 'Super Admin Account'
+                          : accountInfo.role === 'barber'
+                            ? 'Barber / Salon Account'
+                            : 'Client / Customer Account'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] opacity-90 truncate mt-0.5">
+                      Welcome, <strong className="text-white font-semibold">{accountInfo.name || 'User'}</strong>
+                      {accountInfo.shopName ? ` • ${accountInfo.shopName}` : ''}
+                    </p>
+                  </div>
+
+                  <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                    accountInfo.role === 'superadmin'
+                      ? 'bg-purple-500/30 text-purple-200 border-purple-400/40'
+                      : accountInfo.role === 'barber'
+                        ? 'bg-amber-500/30 text-amber-200 border-amber-400/40'
+                        : 'bg-blue-500/30 text-blue-200 border-blue-400/40'
+                  }`}>
+                    {accountInfo.role === 'superadmin'
+                      ? 'Admin'
+                      : accountInfo.role === 'barber'
+                        ? 'Barber'
+                        : 'Client'}
+                  </span>
+                </div>
+              )}
+
+              {!checkingRole && accountInfo?.shopRequest && (
+                <div className={`p-3 rounded-2xl border text-xs animate-in fade-in ${
+                  accountInfo.shopRequest.status === 'pending'
+                    ? 'bg-amber-950/60 border-amber-500/50 text-amber-200'
+                    : 'bg-red-950/60 border-red-500/50 text-red-200'
+                }`}>
+                  <div className="flex items-center gap-2 font-bold text-white">
+                    {accountInfo.shopRequest.status === 'pending' ? (
+                      <>
+                        <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
+                        <span>Shop Registration Under Review</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-red-400" />
+                        <span>Shop Registration Not Approved</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-[11px] mt-1 opacity-90 leading-relaxed">
+                    {accountInfo.shopRequest.status === 'pending'
+                      ? `"${accountInfo.shopRequest.shopName}" is awaiting Super Admin verification. You will receive a WhatsApp message on approval.`
+                      : `Reason: ${accountInfo.shopRequest.reason || 'Please submit updated registration details.'}`}
+                  </p>
+                </div>
+              )}
+
+              {!checkingRole && accountInfo && !accountInfo.exists && !accountInfo.shopRequest && f.mobile.length === 10 && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-stone-800/80 border border-stone-700/80 text-stone-300 text-xs animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span className="text-[11px] text-stone-300">
+                    Mobile not registered yet. If you own a salon, click "Register Your Shop" below.
+                  </span>
+                </div>
+              )}
 
             </div>
 
@@ -314,14 +441,28 @@ export default function Login() {
               </div>
             )}
 
-            {/* Submit Button */}
+            {/* Dynamic Role-Based Submit Button */}
             <button
               type="submit"
               disabled={busy || f.mobile.length !== 10}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm shadow-lg shadow-amber-600/30 transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white font-semibold text-sm shadow-lg transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${
+                accountInfo?.role === 'superadmin'
+                  ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/30'
+                  : accountInfo?.role === 'customer'
+                    ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
+                    : 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/30'
+              }`}
             >
               <span>
-                {busy ? 'Signing in...' : 'Sign In to Dashboard'}
+                {busy
+                  ? 'Signing in...'
+                  : accountInfo?.role === 'superadmin'
+                    ? 'Sign In as Super Admin'
+                    : accountInfo?.role === 'barber'
+                      ? 'Sign In to Barber Dashboard'
+                      : accountInfo?.role === 'customer'
+                        ? 'Sign In as Client'
+                        : 'Sign In to Dashboard'}
               </span>
 
               {!busy && (

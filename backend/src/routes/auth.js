@@ -25,6 +25,44 @@ const issue = async (u) => {
     }
   };
 };
+r.get('/lookup/:mobile', wrap(async (req, res) => {
+  const mobile = String(req.params.mobile || '').replace(/\D/g, '').slice(-10);
+  if (mobile.length !== 10) return res.status(400).json({ exists: false, message: 'Invalid mobile number' });
+
+  const u = await User.findOne({ mobile }).select('role name shopId active');
+  if (u) {
+    let shopName = null;
+    let shopCode = null;
+    if (u.shopId) {
+      const s = await Shop.findById(u.shopId).select('name shopCode');
+      shopName = s?.name;
+      shopCode = s?.shopCode;
+    }
+    return res.json({
+      exists: true,
+      role: u.role,
+      name: u.name,
+      active: u.active,
+      shopName,
+      shopCode
+    });
+  }
+
+  const shopReq = await ShopRequest.findOne({ mobile }).sort('-createdAt').select('shopName status rejectionReason');
+  if (shopReq) {
+    return res.json({
+      exists: false,
+      shopRequest: {
+        status: shopReq.status,
+        shopName: shopReq.shopName,
+        reason: shopReq.rejectionReason
+      }
+    });
+  }
+
+  res.json({ exists: false });
+}));
+
 r.post('/login', wrap(async (req, res) => {
   need(req.body, ['mobile', 'password']);
   const input = String(req.body.mobile || '').trim();
