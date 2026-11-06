@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import api from '../api';
+import api, { clearSession } from '../api';
 import { auth, ui, notifications } from '../redux/slices';
 import ConfirmModal from './Modal';
 import {
@@ -442,16 +442,16 @@ function UserProfileMenu({ onLogout, isMobile = false }) {
               </button>
             )}
 
-            {/* <button
+            <button
               onClick={() => {
                 setOpen(false);
                 onLogout();
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left"
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors text-left"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </button> */}
+              <span>Log Out</span>
+            </button>
           </div>
         </div>
       )}
@@ -555,6 +555,8 @@ export default function Shell({ title, links, children, actions, subtitle }) {
   }, [activeShop?.logoUrl]);
 
   const confirmLogout = () => {
+    setShowLogoutModal(false);
+    clearSession();
     d(auth.actions.logout());
     nav('/login');
   };
@@ -755,6 +757,51 @@ export default function Shell({ title, links, children, actions, subtitle }) {
             );
           })}
         </nav>
+
+        {/* Desktop Sidebar Bottom Footer: Fullscreen & User Profile Logout */}
+        <div className="p-3 border-t border-stone-800 space-y-2 mt-auto">
+          {/* Full Screen View Toggle */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-medium transition-colors"
+            title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen View'}
+          >
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-amber-400" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span>{isFullscreen ? 'Exit Full Screen' : 'Full Screen'}</span>
+          </button>
+
+          {/* User Account / Profile Info & Quick Logout */}
+          <div className="flex items-center justify-between p-2 rounded-xl bg-stone-800/80 border border-stone-700/60 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-amber-600/30 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                {u?.avatarUrl ? (
+                  <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover rounded-lg" />
+                ) : u?.name ? (
+                  u.name[0].toUpperCase()
+                ) : (
+                  <User className="w-3.5 h-3.5" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <span className="font-bold text-white block truncate text-[11px] leading-tight">
+                  {u?.name || 'Account'}
+                </span>
+                <span className="text-[10px] text-amber-400 font-medium block truncate leading-tight">
+                  {roleLabel}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              className="p-1.5 rounded-lg text-stone-400 hover:text-red-400 hover:bg-red-950/40 transition-colors"
+              title="Log Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </aside>
 
       {/* Main Content Area - offset for fixed sidebar on desktop */}

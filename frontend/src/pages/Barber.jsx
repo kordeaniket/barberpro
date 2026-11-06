@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -17,7 +17,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import api from '../api';
+import api, { clearSession } from '../api';
 import Shell, { fmt } from '../components/Shell';
 import ConfirmModal from '../components/Modal';
 import Crud, { Stat, StatusBadge } from '../components/Crud';
@@ -68,7 +68,8 @@ import {
   MessageCircle,
   Armchair,
   ArmchairIcon,
-  Download
+  Download,
+  LogOut
 } from 'lucide-react';
 
 const barberLinks = [
@@ -2101,7 +2102,9 @@ const DAYS = [
 
 function StoreAndProfile() {
   const d = useDispatch();
+  const nav = useNavigate();
   const [tab, setTab] = useState('store'); // 'store' | 'profile' | 'password
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [shopForm, setShopForm] = useState({
     name: '',
     ownerName: '',
@@ -2560,17 +2563,41 @@ function StoreAndProfile() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-stone-100 flex flex-wrap gap-2">
-
-
+            <div className="pt-3 border-t border-stone-100 flex items-center justify-between flex-wrap gap-2">
               <button type="submit" className="btn-brand px-6 py-2.5">
                 <Save className="w-4 h-4" />
                 <span>Save Profile</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(true)}
+                className="btn-o text-xs py-2 px-4 text-red-600 hover:bg-red-50 border-red-200 flex items-center gap-1.5 ml-auto"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
               </button>
             </div>
           </div>
         </form>
       )}
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        type="danger"
+        title="Sign Out"
+        message="Are you sure you want to log out of your Barber account? All local session and store data will be cleared."
+        confirmText="Log Out"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          clearSession();
+          d(auth.actions.logout());
+          nav('/login');
+        }}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
 
       {/* Change Password Modal */}
       {showPwModal && (

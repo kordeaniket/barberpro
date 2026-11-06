@@ -78,7 +78,12 @@ export const saveSession = (d) => {
 };
 
 export const clearSession = () => {
-  ['token', 'refreshToken', 'user'].forEach((k) => localStorage.removeItem(k));
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch (e) {
+    ['token', 'refreshToken', 'user', 'shopCode', 'barber_notifications', 'customer_notifications'].forEach((k) => localStorage.removeItem(k));
+  }
 };
 
 export default api;
