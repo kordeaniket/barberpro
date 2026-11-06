@@ -1793,17 +1793,80 @@ export default function Customer() {
                   Account & Security
                 </h4>
 
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordModal(true)}
-                  className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-800/60 text-left text-xs text-stone-300 font-medium transition-colors"
-                >
-                  <span className="flex items-center gap-2">
-                    <KeyRound className="w-4 h-4 text-stone-500" />
-                    <span>Update Password</span>
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-stone-500" />
-                </button>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordModal(!showPasswordModal);
+                      setPwError('');
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-800/60 text-left text-xs text-stone-300 font-medium transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <KeyRound className="w-4 h-4 text-amber-500" />
+                      <span>Change Account Password</span>
+                    </span>
+                    <span className="text-[11px] text-amber-400 font-semibold">
+                      {showPasswordModal ? 'Close' : 'Update'}
+                    </span>
+                  </button>
+
+                  {/* Direct On-Screen Password Form (No Modal) */}
+                  {showPasswordModal && (
+                    <form onSubmit={handlePasswordChange} className="p-4 rounded-xl bg-stone-900 border border-stone-800 space-y-3 animate-in fade-in">
+                      <h5 className="font-bold text-white text-xs flex items-center gap-1.5 pb-1 border-b border-stone-800">
+                        <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Update Your Password</span>
+                      </h5>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-stone-400">New Password (min 8 chars) *</label>
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          className="inp text-xs py-1.5 bg-[#14151b] border-stone-700 text-white"
+                          placeholder="••••••••"
+                          value={pwForm.newPassword}
+                          onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-stone-400">Confirm Password *</label>
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          className="inp text-xs py-1.5 bg-[#14151b] border-stone-700 text-white"
+                          placeholder="••••••••"
+                          value={pwForm.confirm}
+                          onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+                        />
+                      </div>
+
+                      {pwError && (
+                        <div className="flex items-center gap-1.5 p-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-[11px]">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{pwError}</span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-end gap-2 pt-1 border-t border-stone-800">
+                        <button
+                          type="button"
+                          className="btn-o text-xs py-1.5 px-3"
+                          onClick={() => { setShowPasswordModal(false); setPwError(''); setPwForm({ newPassword: '', confirm: '' }); }}
+                        >
+                          Cancel
+                        </button>
+                        <button type="submit" className="btn-brand text-xs py-1.5 px-3">
+                          Save Password
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
 
                 {shopInfo?.shop?.mobile && (
                   <a
@@ -2231,77 +2294,7 @@ export default function Customer() {
         onClose={() => setShowLogoutModal(false)}
       />
 
-      {/* 4. Update Password Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs animate-in fade-in">
-          <form
-            onSubmit={handlePasswordChange}
-            className="card max-w-sm w-full space-y-4 shadow-float border border-stone-200"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-              <h3 className="font-bold text-stone-900 text-sm flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-amber-600" />
-                <span>Change Password</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => { setShowPasswordModal(false); setPwError(''); setPwForm({ newPassword: '', confirm: '' }); }}
-                className="p-1 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-600">New Password (min 8 chars)</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                className="inp"
-                placeholder="••••••••"
-                value={pwForm.newPassword}
-                onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-600">Confirm Password</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                className="inp"
-                placeholder="••••••••"
-                value={pwForm.confirm}
-                onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
-              />
-            </div>
-
-            {pwError && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{pwError}</span>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-stone-100">
-              <button
-                type="button"
-                className="btn-o"
-                onClick={() => { setShowPasswordModal(false); setPwError(''); setPwForm({ newPassword: '', confirm: '' }); }}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="btn-brand">
-                Update Password
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* 5. Online UPI / App Payment Modal */}
+      {/* 4. Online UPI / App Payment Modal */}
       {showPaymentModal && paymentAppointment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/80 backdrop-blur-sm animate-in fade-in">
           <div className="card max-w-md w-full max-h-[92vh] overflow-y-auto space-y-4 shadow-float border border-stone-200">

@@ -2169,7 +2169,6 @@ function StoreAndProfile() {
     avatarUrl: ''
   });
   const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
-  const [showPwModal, setShowPwModal] = useState(false);
   const [logoImgError, setLogoImgError] = useState(false);
   const [qrImgError, setQrImgError] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
@@ -2351,7 +2350,6 @@ function StoreAndProfile() {
     try {
       await api.post('/auth/change-password', { newPassword: pwForm.newPassword });
       d(ui.actions.setMsg({ type: 'ok', text: 'Password successfully changed!' }));
-      setShowPwModal(false);
       setPwForm({ newPassword: '', confirm: '' });
     } catch (err) {
       d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Failed to update password' }));
@@ -2416,10 +2414,7 @@ function StoreAndProfile() {
 
         <button
           type="button"
-          onClick={() => {
-            setShowPwModal(true);
-            setTab('password');
-          }}
+          onClick={() => setTab('password')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'password'
             ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
             : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
@@ -3205,67 +3200,66 @@ function StoreAndProfile() {
         onClose={() => setShowLogoutConfirm(false)}
       />
 
-      {/* Change Password Modal */}
-      {showPwModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-sm animate-in fade-in">
-          <form
-            onSubmit={handlePasswordChange}
-            className="card max-w-sm w-full space-y-4 shadow-float border border-stone-200"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-              <h3 className="font-bold text-stone-900 text-sm flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-amber-600" />
-                <span>Update Password</span>
-              </h3>
+      {/* Tab 4: Change Password (Direct On-Screen Tab, No Modal) */}
+      {tab === 'password' && (
+        <form onSubmit={handlePasswordChange} className="space-y-6 max-w-xl animate-in fade-in duration-150">
+          <div className="card p-6 space-y-5">
+            <div className="flex items-center gap-3 pb-3 border-b border-stone-100">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center font-bold">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-stone-900">Change Account Password</h3>
+                <p className="text-xs text-stone-500">Update your security credentials for logging into BarberPro.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-stone-700">New Password (min 8 chars) *</label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  className="inp"
+                  placeholder="••••••••"
+                  value={pwForm.newPassword}
+                  onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-stone-700">Confirm New Password *</label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  className="inp"
+                  placeholder="••••••••"
+                  value={pwForm.confirm}
+                  onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => setShowPwModal(false)}
-                className="p-1 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-700"
+                className="btn-o text-xs py-2 px-4"
+                onClick={() => {
+                  setTab('store');
+                  setPwForm({ newPassword: '', confirm: '' });
+                }}
               >
-                <XCircle className="w-4 h-4" />
+                Back to Store Settings
+              </button>
+              <button type="submit" className="btn-brand px-6 py-2 flex items-center gap-2">
+                <Save className="w-4 h-4" />
+                <span>Save New Password</span>
               </button>
             </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-600">New Password (min 8 chars) *</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                className="inp"
-                placeholder="••••••••"
-                value={pwForm.newPassword}
-                onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-600">Confirm New Password *</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                className="inp"
-                placeholder="••••••••"
-                value={pwForm.confirm}
-                onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                className="btn-o"
-                onClick={() => setShowPwModal(false)}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="btn-brand">
-                Save Password
-              </button>
-            </div>
-          </form>
-        </div>
+          </div>
+        </form>
       )}
     </Shell>
   );
