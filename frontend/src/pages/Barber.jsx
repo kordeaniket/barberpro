@@ -93,7 +93,7 @@ function Home() {
   const [dash, setDash] = useState(null);
   const [loading, setLoading] = useState(true);
   useLive();
-  let sName = info.shop.name;
+  let sName = info?.shop?.name;
   const loadDashboard = useCallback(async (p) => {
     setLoading(true);
     try {
@@ -1616,8 +1616,8 @@ function Appts() {
                                         onClick={() => sendReminder(a._id)}
                                         disabled={sendingReminderId === a._id}
                                         className={`btn-o text-xs py-1 px-2 transition-colors ${a.reminded1h
-                                            ? 'text-emerald-700 bg-emerald-50 border-emerald-300 hover:bg-emerald-100'
-                                            : 'text-stone-600 hover:text-emerald-700 hover:border-emerald-300'
+                                          ? 'text-emerald-700 bg-emerald-50 border-emerald-300 hover:bg-emerald-100'
+                                          : 'text-stone-600 hover:text-emerald-700 hover:border-emerald-300'
                                           }`}
                                         title={a.reminded1h ? '1-Hour WhatsApp reminder already sent (click to resend)' : 'Send 1-Hour WhatsApp reminder to client & barber'}
                                       >

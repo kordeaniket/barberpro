@@ -219,7 +219,7 @@ export default function Login() {
             </h1>
 
             <p className="text-xs sm:text-sm text-stone-400">
-              Single Login for Super Admin, Barbers & Clients
+              Login for Admin, Barbers & Clients
             </p>
 
           </div>
@@ -247,8 +247,8 @@ export default function Login() {
                   placeholder="Enter 10 digit mobile number"
                   maxLength={10}
                   className={`w-full bg-stone-800/80 border rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 transition-all ${mobileError
-                      ? 'border-red-500 focus:ring-red-500/40'
-                      : 'border-stone-700 focus:ring-amber-500/40 focus:border-amber-500'
+                    ? 'border-red-500 focus:ring-red-500/40'
+                    : 'border-stone-700 focus:ring-amber-500/40 focus:border-amber-500'
                     }`}
                   value={f.mobile}
                   onChange={handleMobileChange}
@@ -272,8 +272,8 @@ export default function Login() {
                 )}
 
                 <span className={`text-xs ${f.mobile.length === 10
-                    ? 'text-green-400'
-                    : 'text-stone-500'
+                  ? 'text-green-400'
+                  : 'text-stone-500'
                   }`}>
                   {f.mobile.length}/10
                 </span>
@@ -288,21 +288,19 @@ export default function Login() {
                 </div>
               )}
 
-              {!checkingRole && accountInfo?.exists && (
-                <div className={`flex items-center gap-2.5 p-3 rounded-2xl border text-xs animate-in fade-in zoom-in-95 ${
-                  accountInfo.role === 'superadmin'
-                    ? 'bg-gradient-to-r from-purple-950/70 to-purple-900/30 border-purple-500/50 text-purple-200 shadow-sm shadow-purple-900/30'
-                    : accountInfo.role === 'barber'
-                      ? 'bg-gradient-to-r from-amber-950/70 to-amber-900/30 border-amber-500/50 text-amber-200 shadow-sm shadow-amber-900/30'
-                      : 'bg-gradient-to-r from-blue-950/70 to-blue-900/30 border-blue-500/50 text-blue-200 shadow-sm shadow-blue-900/30'
-                }`}>
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
-                    accountInfo.role === 'superadmin'
-                      ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
-                      : accountInfo.role === 'barber'
-                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                        : 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+              {/* {!checkingRole && accountInfo?.exists && (
+                <div className={`flex items-center gap-2.5 p-3 rounded-2xl border text-xs animate-in fade-in zoom-in-95 ${accountInfo.role === 'superadmin'
+                  ? 'bg-gradient-to-r from-purple-950/70 to-purple-900/30 border-purple-500/50 text-purple-200 shadow-sm shadow-purple-900/30'
+                  : accountInfo.role === 'barber'
+                    ? 'bg-gradient-to-r from-amber-950/70 to-amber-900/30 border-amber-500/50 text-amber-200 shadow-sm shadow-amber-900/30'
+                    : 'bg-gradient-to-r from-blue-950/70 to-blue-900/30 border-blue-500/50 text-blue-200 shadow-sm shadow-blue-900/30'
                   }`}>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${accountInfo.role === 'superadmin'
+                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
+                    : accountInfo.role === 'barber'
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                    }`}>
                     {accountInfo.role === 'superadmin' ? (
                       <ShieldCheck className="w-4 h-4" />
                     ) : accountInfo.role === 'barber' ? (
@@ -328,13 +326,12 @@ export default function Login() {
                     </p>
                   </div>
 
-                  <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
-                    accountInfo.role === 'superadmin'
-                      ? 'bg-purple-500/30 text-purple-200 border-purple-400/40'
-                      : accountInfo.role === 'barber'
-                        ? 'bg-amber-500/30 text-amber-200 border-amber-400/40'
-                        : 'bg-blue-500/30 text-blue-200 border-blue-400/40'
-                  }`}>
+                  <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${accountInfo.role === 'superadmin'
+                    ? 'bg-purple-500/30 text-purple-200 border-purple-400/40'
+                    : accountInfo.role === 'barber'
+                      ? 'bg-amber-500/30 text-amber-200 border-amber-400/40'
+                      : 'bg-blue-500/30 text-blue-200 border-blue-400/40'
+                    }`}>
                     {accountInfo.role === 'superadmin'
                       ? 'Admin'
                       : accountInfo.role === 'barber'
@@ -342,14 +339,13 @@ export default function Login() {
                         : 'Client'}
                   </span>
                 </div>
-              )}
+              )} */}
 
               {!checkingRole && accountInfo?.shopRequest && (
-                <div className={`p-3 rounded-2xl border text-xs animate-in fade-in ${
-                  accountInfo.shopRequest.status === 'pending'
-                    ? 'bg-amber-950/60 border-amber-500/50 text-amber-200'
-                    : 'bg-red-950/60 border-red-500/50 text-red-200'
-                }`}>
+                <div className={`p-3 rounded-2xl border text-xs animate-in fade-in ${accountInfo.shopRequest.status === 'pending'
+                  ? 'bg-amber-950/60 border-amber-500/50 text-amber-200'
+                  : 'bg-red-950/60 border-red-500/50 text-red-200'
+                  }`}>
                   <div className="flex items-center gap-2 font-bold text-white">
                     {accountInfo.shopRequest.status === 'pending' ? (
                       <>
@@ -445,13 +441,12 @@ export default function Login() {
             <button
               type="submit"
               disabled={busy || f.mobile.length !== 10}
-              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white font-semibold text-sm shadow-lg transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${
-                accountInfo?.role === 'superadmin'
-                  ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/30'
-                  : accountInfo?.role === 'customer'
-                    ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
-                    : 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/30'
-              }`}
+              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white font-semibold text-sm shadow-lg transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${accountInfo?.role === 'superadmin'
+                ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/30'
+                : accountInfo?.role === 'customer'
+                  ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
+                  : 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/30'
+                }`}
             >
               <span>
                 {busy
@@ -636,17 +631,15 @@ export default function Login() {
                         required
                         maxLength={10}
                         placeholder="10 digit mobile number"
-                        className={`w-full bg-stone-800/90 border rounded-xl pl-9 pr-14 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 transition-all ${
-                          regMobileError
-                            ? 'border-red-500 focus:ring-red-500/40'
-                            : 'border-stone-700 focus:ring-amber-500/40 focus:border-amber-500'
-                        }`}
+                        className={`w-full bg-stone-800/90 border rounded-xl pl-9 pr-14 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 transition-all ${regMobileError
+                          ? 'border-red-500 focus:ring-red-500/40'
+                          : 'border-stone-700 focus:ring-amber-500/40 focus:border-amber-500'
+                          }`}
                         value={regForm.mobile}
                         onChange={handleRegMobileChange}
                       />
-                      <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium ${
-                        regForm.mobile.length === 10 ? 'text-emerald-400' : 'text-stone-500'
-                      }`}>
+                      <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium ${regForm.mobile.length === 10 ? 'text-emerald-400' : 'text-stone-500'
+                        }`}>
                         {regForm.mobile.length}/10
                       </span>
                     </div>
