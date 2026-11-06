@@ -54,4 +54,19 @@ const Invoice = mongoose.model('Invoice', new Schema({
   items: [{ name: String, price: Number }], discount: { type: Number, default: 0 }, taxPct: { type: Number, default: 0 },
   total: Number, method: { type: String, enum: ['cash', 'upi', 'card', 'online'], default: 'cash' }, status: { type: String, default: 'paid' },
 }, T));
-module.exports = { User, Plan, Shop, Service, Customer, Appointment, Invoice, BLOCKING };
+const shopRequestSchema = new Schema({
+  shopName: { type: String, required: true },
+  ownerName: { type: String, required: true },
+  mobile: { type: String, required: true },
+  email: String,
+  city: String,
+  address: String,
+  passwordHash: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  rejectionReason: String,
+  shopId: ref('Shop'),
+  processedAt: Date,
+}, T);
+shopRequestSchema.index({ mobile: 1, status: 1 });
+const ShopRequest = mongoose.model('ShopRequest', shopRequestSchema);
+module.exports = { User, Plan, Shop, Service, Customer, Appointment, Invoice, BLOCKING, ShopRequest };

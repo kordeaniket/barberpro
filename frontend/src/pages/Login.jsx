@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import { auth } from '../redux/slices';
+import api from '../api';
 import {
   Scissors,
   Phone,
@@ -11,6 +12,16 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Store,
+  CheckCircle2,
+  X,
+  Sparkles,
+  MapPin,
+  User,
+  Mail,
+  Building2,
+  MessageCircle,
+  RefreshCw
 } from 'lucide-react';
 
 export default function Login() {
@@ -24,6 +35,84 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [mobileError, setMobileError] = useState('');
+
+  // Shop Registration Modal State
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [regForm, setRegForm] = useState({
+    shopName: '',
+    ownerName: '',
+    mobile: '',
+    email: '',
+    city: '',
+    address: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [regMobileError, setRegMobileError] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [regBusy, setRegBusy] = useState(false);
+  const [regError, setRegError] = useState('');
+  const [regSuccess, setRegSuccess] = useState(null);
+
+  const handleRegMobileChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setRegForm((prev) => ({ ...prev, mobile: val }));
+    if (val.length > 0 && val.length < 10) {
+      setRegMobileError('Must be exactly 10 digits');
+    } else {
+      setRegMobileError('');
+    }
+  };
+
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    setRegError('');
+
+    if (regForm.mobile.length !== 10) {
+      setRegMobileError('Please enter a valid 10-digit mobile number');
+      return;
+    }
+    if (regForm.password.length < 6) {
+      setRegError('Password must be at least 6 characters');
+      return;
+    }
+    if (regForm.password !== regForm.confirmPassword) {
+      setRegError('Passwords do not match');
+      return;
+    }
+
+    try {
+      setRegBusy(true);
+      const res = await api.post('/auth/register-shop', regForm);
+      setRegSuccess({
+        shopName: regForm.shopName,
+        ownerName: regForm.ownerName,
+        mobile: regForm.mobile,
+        message: res.data?.message || 'Shop registration request submitted!'
+      });
+    } catch (err) {
+      setRegError(err.response?.data?.message || 'Failed to submit registration request. Please try again.');
+    } finally {
+      setRegBusy(false);
+    }
+  };
+
+  const resetRegModal = () => {
+    setShowRegisterModal(false);
+    setRegSuccess(null);
+    setRegError('');
+    setRegMobileError('');
+    setRegForm({
+      shopName: '',
+      ownerName: '',
+      mobile: '',
+      email: '',
+      city: '',
+      address: '',
+      password: '',
+      confirmPassword: ''
+    });
+  };
 
   // Mobile Number Validation
   const handleMobileChange = (e) => {
@@ -231,7 +320,6 @@ export default function Login() {
               disabled={busy || f.mobile.length !== 10}
               className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm shadow-lg shadow-amber-600/30 transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-
               <span>
                 {busy ? 'Signing in...' : 'Sign In to Dashboard'}
               </span>
@@ -239,14 +327,325 @@ export default function Login() {
               {!busy && (
                 <ArrowRight className="w-4 h-4" />
               )}
-
             </button>
-
           </form>
+
+          {/* Register Your Shop CTA */}
+          <div className="pt-4 border-t border-stone-800 text-center space-y-2">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-stone-400">
+              <span>Barber or Salon Owner?</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                resetRegModal();
+                setShowRegisterModal(true);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-stone-800/90 hover:bg-stone-700/80 border border-stone-700 hover:border-amber-500/50 text-amber-400 hover:text-amber-300 font-semibold text-xs transition-all shadow-sm group"
+            >
+              <Store className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+              <span>Register Your Shop With Us</span>
+              <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+            <p className="text-[11px] text-stone-500">
+              Submit your shop for review. Super Admin approval & login link will be sent to your WhatsApp.
+            </p>
+          </div>
 
         </div>
 
       </div>
+
+      {/* Shop Registration Modal */}
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-stone-900 border border-stone-800 rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={resetRegModal}
+              className="absolute top-4 right-4 p-2 text-stone-400 hover:text-white rounded-xl hover:bg-stone-800 transition-colors"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {regSuccess ? (
+              /* Success Confirmation View */
+              <div className="text-center py-4 space-y-5 animate-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
+                  <CheckCircle2 className="w-9 h-9" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <h3 className="text-xl sm:text-2xl font-bold text-white">
+                    Registration Request Submitted!
+                  </h3>
+                  <p className="text-xs sm:text-sm text-stone-400 max-w-sm mx-auto">
+                    Your request for <b className="text-white font-semibold">"{regSuccess.shopName}"</b> has been submitted to the Super Admin for review.
+                  </p>
+                </div>
+
+                {/* WhatsApp Notification Notice Box */}
+                <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-800/40 text-left space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
+                    <MessageCircle className="w-4 h-4 shrink-0" />
+                    <span>WhatsApp Approval Notification</span>
+                  </div>
+                  <p className="text-xs text-stone-300 leading-relaxed">
+                    Once Super Admin approves your shop, a direct WhatsApp message will be sent to{' '}
+                    <b className="text-white font-bold">+91 {regSuccess.mobile}</b> with:
+                  </p>
+                  <ul className="text-[11px] text-stone-400 space-y-1 list-disc list-inside">
+                    <li>Your Barber Login URL</li>
+                    <li>Registered Mobile & Credentials</li>
+                    <li>Step-by-step instructions to set up your shop</li>
+                    <li>Your Customer Booking Page Link</li>
+                  </ul>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={resetRegModal}
+                    className="w-full py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm shadow-lg shadow-amber-600/30 transition-all"
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Registration Form */
+              <div className="space-y-5">
+                <div className="flex items-start gap-3">
+                  <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0">
+                    <Store className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white">
+                      Register Your Shop
+                    </h3>
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      Join BarberPro multi-tenant platform. Super Admin will verify and approve your shop.
+                    </p>
+                  </div>
+                </div>
+
+                {regError && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-red-950/60 border border-red-800/60 text-red-300 text-xs animate-in fade-in">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                    <span>{regError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+                  {/* Shop Name & Owner Name */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                        Shop Name *
+                      </label>
+                      <div className="relative">
+                        <Store className="w-4 h-4 text-stone-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Royal Barber Lounge"
+                          className="w-full bg-stone-800/90 border border-stone-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
+                          value={regForm.shopName}
+                          onChange={(e) => setRegForm({ ...regForm, shopName: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                        Owner Name *
+                      </label>
+                      <div className="relative">
+                        <User className="w-4 h-4 text-stone-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Vikram Sharma"
+                          className="w-full bg-stone-800/90 border border-stone-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
+                          value={regForm.ownerName}
+                          onChange={(e) => setRegForm({ ...regForm, ownerName: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Number (with WhatsApp badge note) */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
+                        Owner Mobile Number *
+                      </label>
+                      <span className="text-[10px] text-emerald-400 flex items-center gap-1">
+                        <MessageCircle className="w-3 h-3" />
+                        WhatsApp reminder & approval sent here
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-stone-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        required
+                        maxLength={10}
+                        placeholder="10 digit mobile number"
+                        className={`w-full bg-stone-800/90 border rounded-xl pl-9 pr-14 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 transition-all ${
+                          regMobileError
+                            ? 'border-red-500 focus:ring-red-500/40'
+                            : 'border-stone-700 focus:ring-amber-500/40 focus:border-amber-500'
+                        }`}
+                        value={regForm.mobile}
+                        onChange={handleRegMobileChange}
+                      />
+                      <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium ${
+                        regForm.mobile.length === 10 ? 'text-emerald-400' : 'text-stone-500'
+                      }`}>
+                        {regForm.mobile.length}/10
+                      </span>
+                    </div>
+                    {regMobileError && (
+                      <p className="text-[11px] text-red-400 flex items-center gap-1 mt-0.5">
+                        <AlertCircle className="w-3 h-3" />
+                        {regMobileError}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* City & Address */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                        City *
+                      </label>
+                      <div className="relative">
+                        <MapPin className="w-4 h-4 text-stone-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Pune, Mumbai"
+                          className="w-full bg-stone-800/90 border border-stone-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
+                          value={regForm.city}
+                          onChange={(e) => setRegForm({ ...regForm, city: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                        Email Address (Optional)
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-stone-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="email"
+                          placeholder="owner@example.com"
+                          className="w-full bg-stone-800/90 border border-stone-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
+                          value={regForm.email}
+                          onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                      Shop Address / Landmark (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Shop #4, Ground Floor, MG Road"
+                      className="w-full bg-stone-800/90 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
+                      value={regForm.address}
+                      onChange={(e) => setRegForm({ ...regForm, address: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Password & Confirm Password */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                        Create Password * (min 6)
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-stone-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type={showRegPassword ? 'text' : 'password'}
+                          required
+                          minLength={6}
+                          placeholder="Choose password"
+                          className="w-full bg-stone-800/90 border border-stone-700 rounded-xl pl-9 pr-9 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
+                          value={regForm.password}
+                          onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowRegPassword(!showRegPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300"
+                        >
+                          {showRegPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                        Confirm Password *
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-stone-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type={showRegPassword ? 'text' : 'password'}
+                          required
+                          minLength={6}
+                          placeholder="Confirm password"
+                          className="w-full bg-stone-800/90 border border-stone-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
+                          value={regForm.confirmPassword}
+                          onChange={(e) => setRegForm({ ...regForm, confirmPassword: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-800">
+                    <button
+                      type="button"
+                      onClick={resetRegModal}
+                      className="px-4 py-2 rounded-xl border border-stone-700 text-stone-300 hover:bg-stone-800 text-xs font-semibold transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={regBusy || regForm.mobile.length !== 10}
+                      className="flex items-center gap-2 py-2 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow-lg shadow-amber-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {regBusy ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Submitting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Store className="w-3.5 h-3.5" />
+                          <span>Submit Shop for Approval</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

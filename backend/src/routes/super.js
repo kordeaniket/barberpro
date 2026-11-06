@@ -1,9 +1,10 @@
 const r = require('express').Router();
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
-const { User, Shop, Plan, Customer, Appointment, Invoice, Service } = require('../models');
+const { User, Shop, Plan, Customer, Appointment, Invoice, Service, ShopRequest } = require('../models');
 const { auth } = require('../middleware/auth');
 const { wrap, pick, need, rand } = require('../utils/helpers');
+const { sendWhatsApp } = require('../services/whatsapp');
 
 r.use(auth('superadmin'));
 
@@ -162,7 +163,8 @@ r.get('/dashboard', wrap(async (req, res) => {
     monthSalesAgg,
     perShopAgg,
     rawMonthlyTrend,
-    plans
+    plans,
+    pendingShopRequests
   ] = await Promise.all([
     Shop.countDocuments(),
     Shop.countDocuments({ status: 'active' }),
@@ -185,7 +187,8 @@ r.get('/dashboard', wrap(async (req, res) => {
     Invoice.aggregate([
       { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } }, total: { $sum: '$total' }, count: { $sum: 1 } } }
     ]),
-    Plan.find().select('name cycle price')
+    Plan.find().select('name cycle price'),
+    ShopRequest.countDocuments({ status: 'pending' })
   ]);
 
   const monthlyTrend = getLast6Months();
@@ -218,7 +221,8 @@ r.get('/dashboard', wrap(async (req, res) => {
       totalSales,
       todaySales,
       monthSales,
-      completionRate: totalBookings > 0 ? Math.round((completed / totalBookings) * 100) : 0
+      completionRate: totalBookings > 0 ? Math.round((completed / totalBookings) * 100) : 0,
+      pendingShopRequests: pendingShopRequests || 0
     },
     perShop: perShopAgg,
     monthlyTrend,
@@ -246,4 +250,124 @@ r.post('/shops/:id/reset-password', wrap(async (req, res) => {
   await User.updateOne({ shopId: req.params.id, role: 'barber' }, { passwordHash: await bcrypt.hash(temp, 10), mustChangePassword: true });
   res.json({ message: 'New temporary password: ' + temp });
 }));
+
+// List Shop Registration Requests
+r.get('/shop-requests', wrap(async (req, res) => {
+  const { status } = req.query;
+  const filter = {};
+  if (status && status !== 'all') {
+    filter.status = status;
+  }
+  const requests = await ShopRequest.find(filter)
+    .populate('shopId', 'name shopCode')
+    .sort('-createdAt');
+  res.json(requests);
+}));
+
+// Approve Shop Registration Request
+r.post('/shop-requests/:id/approve', wrap(async (req, res) => {
+  const shopReq = await ShopRequest.findById(req.params.id);
+  if (!shopReq) return res.status(404).json({ message: 'Registration request not found' });
+  if (shopReq.status !== 'pending') {
+    return res.status(400).json({ message: `Request is already ${shopReq.status}` });
+  }
+
+  // Check if mobile is already used by a user
+  const existingUser = await User.findOne({ mobile: shopReq.mobile });
+  if (existingUser) {
+    return res.status(409).json({ message: `A user with mobile ${shopReq.mobile} already exists.` });
+  }
+
+  // Assign trial or specified plan
+  const plan = req.body.planId ? await Plan.findById(req.body.planId) : await Plan.findOne({ cycle: 'trial' });
+  const ends = new Date(Date.now() + (plan?.cycle === 'trial' ? 14 : 30) * 864e5);
+  const shopCode = rand(3).toUpperCase();
+
+  // Create Shop
+  const shop = await Shop.create({
+    name: shopReq.shopName,
+    ownerName: shopReq.ownerName,
+    mobile: shopReq.mobile,
+    email: shopReq.email,
+    city: shopReq.city,
+    address: shopReq.address,
+    planId: plan?._id,
+    subscriptionEnds: ends,
+    shopCode,
+    status: 'active'
+  });
+
+  // Create Barber User
+  const user = await User.create({
+    name: shopReq.ownerName,
+    mobile: shopReq.mobile,
+    email: shopReq.email,
+    role: 'barber',
+    shopId: shop._id,
+    passwordHash: shopReq.passwordHash,
+    mustChangePassword: false,
+    active: true
+  });
+
+  // Update request record
+  shopReq.status = 'approved';
+  shopReq.shopId = shop._id;
+  shopReq.processedAt = new Date();
+  await shopReq.save();
+
+  // Determine URLs
+  const base = process.env.CLIENT_URL || req.headers.origin || 'https://frontend-rho-orpin-73.vercel.app';
+  const loginUrl = `${base}/login`;
+  const bookingUrl = `${base}/s/${shopCode}`;
+
+  // Send WhatsApp message to Barber
+  const waMessage = `💈 *Welcome to BarberPro!* 💈\n\nDear *${shopReq.ownerName}*,\nYour shop registration for *${shopReq.shopName}* has been *APPROVED* by the Super Admin! 🎉\n\n*Your Login Credentials & Details:*\n📱 Registered Mobile: *${shopReq.mobile}*\n🔑 Password: (Use the password you entered during registration)\n🌐 Barber Login URL: ${loginUrl}\n\n*How to Log In & Get Started:*\n1️⃣ Open the login page: ${loginUrl}\n2️⃣ Enter your registered mobile number: *${shopReq.mobile}*\n3️⃣ Enter your password and click *Sign In*\n4️⃣ Go to *Settings* to configure your services, staff, and shop timings.\n\n*Your Customer Booking Link:*\n🔗 ${bookingUrl}\nShare this link with your customers to receive direct online bookings!\n\nWelcome to BarberPro! ✂️`;
+
+  let waResult = { skipped: true };
+  try {
+    waResult = await sendWhatsApp(shopReq.mobile, waMessage);
+  } catch (waErr) {
+    console.error('Failed to send WhatsApp approval message:', waErr);
+  }
+
+  res.json({
+    message: `Shop "${shop.name}" approved successfully! WhatsApp notification sent to ${shopReq.mobile}.`,
+    shop,
+    user: { id: user._id, mobile: user.mobile, name: user.name },
+    waResult
+  });
+}));
+
+// Reject Shop Registration Request
+r.post('/shop-requests/:id/reject', wrap(async (req, res) => {
+  const shopReq = await ShopRequest.findById(req.params.id);
+  if (!shopReq) return res.status(404).json({ message: 'Registration request not found' });
+  if (shopReq.status !== 'pending') {
+    return res.status(400).json({ message: `Request is already ${shopReq.status}` });
+  }
+
+  const reason = req.body.reason ? String(req.body.reason).trim() : 'Registration details could not be verified at this time.';
+
+  shopReq.status = 'rejected';
+  shopReq.rejectionReason = reason;
+  shopReq.processedAt = new Date();
+  await shopReq.save();
+
+  // Send WhatsApp rejection message
+  const waMessage = `✂️ *BarberPro Notification*\n\nDear *${shopReq.ownerName}*,\n\nThank you for your interest in registering *${shopReq.shopName}* on BarberPro.\n\nWe regret to inform you that your shop registration request could not be approved at this time.\n\n*Reason:* ${reason}\n\nIf you believe this is a mistake or wish to provide updated details, please reach out to our support team.\n\nBest regards,\n*BarberPro Admin Team*`;
+
+  let waResult = { skipped: true };
+  try {
+    waResult = await sendWhatsApp(shopReq.mobile, waMessage);
+  } catch (waErr) {
+    console.error('Failed to send WhatsApp rejection message:', waErr);
+  }
+
+  res.json({
+    message: `Shop request rejected. WhatsApp notification sent to ${shopReq.mobile}.`,
+    shopRequest: shopReq,
+    waResult
+  });
+}));
+
 module.exports = r;

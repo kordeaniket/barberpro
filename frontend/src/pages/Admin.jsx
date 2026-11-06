@@ -32,12 +32,20 @@ import {
   Filter,
   RefreshCw,
   Award,
-  ChevronRight
+  ChevronRight,
+  MessageCircle,
+  Check,
+  XCircle,
+  AlertTriangle,
+  FileText,
+  Mail,
+  ExternalLink
 } from 'lucide-react';
 
 const adminLinks = [
   { to: '/admin', label: 'Platform Overview', icon: LayoutDashboard },
-  { to: '/admin/shops', label: 'Shops & Tenants', icon: Store }
+  { to: '/admin/shops', label: 'Shops', icon: Store },
+  { to: '/admin/requests', label: 'Shop Requests', icon: UserCheck }
 ];
 
 // Reusable Monthly Revenue Bar Chart
@@ -316,16 +324,42 @@ function Dash() {
         </div>
       )}
 
+      {/* ================= PENDING SHOP REQUESTS NOTIFICATION ================= */}
+      {mode === 'platform' && (stats.pendingShopRequests || 0) > 0 && (
+        <div className="card bg-amber-500/10 border-amber-300/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-500 text-white shadow-sm shadow-amber-500/30 shrink-0">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-950 flex items-center gap-2">
+                <span>{stats.pendingShopRequests} New Shop Registration Request{stats.pendingShopRequests > 1 ? 's' : ''} Pending Review</span>
+                <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">Action Required</span>
+              </h4>
+              <p className="text-xs text-amber-800/90 mt-0.5">
+                Barbers have submitted their shop details. Approve to automatically provision their salon and dispatch WhatsApp login links.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/admin/requests"
+            className="btn-brand text-xs py-2 px-3.5 whitespace-nowrap self-start sm:self-auto shrink-0 shadow-sm"
+          >
+            Review Requests ({stats.pendingShopRequests})
+          </a>
+        </div>
+      )}
+
       {/* ================= METRIC STAT CARDS ================= */}
       {mode === 'platform' ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Stat l="Total Stores" v={stats.shops} icon={Store} color="amber" />
           <Stat l="Active Stores" v={stats.active} icon={CheckCircle2} color="emerald" />
+          <Stat l="Pending Requests" v={stats.pendingShopRequests || 0} icon={UserCheck} color="amber" />
           <Stat l="Platform Revenue" v={`₹${(stats.totalSales || 0).toLocaleString()}`} icon={DollarSign} color="amber" />
           <Stat l="Today's Sales" v={`₹${(stats.todaySales || 0).toLocaleString()}`} icon={TrendingUp} color="emerald" />
           <Stat l="Total Bookings" v={stats.bookings} icon={CalendarCheck} color="stone" />
           <Stat l="Completed Cuts" v={stats.completed} icon={CheckCircle2} color="emerald" />
-          <Stat l="Total Barbers" v={stats.barbers} icon={Scissors} color="purple" />
           <Stat l="Total Customers" v={stats.customers} icon={Users} color="blue" />
         </div>
       ) : (
@@ -542,7 +576,7 @@ function Shops() {
 
   return (
     <Shell
-      title="Barber Shops & Tenants"
+      title="Barber Shops"
       subtitle="Manage registered barbershops, subscription plans, and credentials"
       links={adminLinks}
       actions={
@@ -856,11 +890,737 @@ function Shops() {
   );
 }
 
+function ShopRequests() {
+  const d = useDispatch();
+  const [requests, setRequests] = useState([]);
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  // Approval modal state
+  const [approveTarget, setApproveTarget] = useState(null);
+  const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [approving, setApproving] = useState(false);
+
+  // Rejection modal state
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState('Shop registration details could not be verified.');
+  const [rejecting, setRejecting] = useState(false);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [reqRes, plansRes] = await Promise.all([
+        api.get('/super/shop-requests'),
+        api.get('/super/plans')
+      ]);
+      setRequests(reqRes.data || []);
+      setPlans(plansRes.data || []);
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Failed to load shop requests' }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleApprove = async () => {
+    if (!approveTarget) return;
+    try {
+      setApproving(true);
+      const res = await api.post(`/super/shop-requests/${approveTarget._id}/approve`, {
+        planId: selectedPlanId || undefined
+      });
+      d(ui.actions.setMsg({ type: 'ok', text: res.data?.message || 'Shop approved & WhatsApp notification sent!' }));
+      setApproveTarget(null);
+      setSelectedPlanId('');
+      loadData();
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Failed to approve shop request' }));
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectTarget) return;
+    try {
+      setRejecting(true);
+      const res = await api.post(`/super/shop-requests/${rejectTarget._id}/reject`, {
+        reason: rejectReason
+      });
+      d(ui.actions.setMsg({ type: 'ok', text: res.data?.message || 'Shop request rejected & WhatsApp notification sent' }));
+      setRejectTarget(null);
+      setRejectReason('Shop registration details could not be verified.');
+      loadData();
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Failed to reject shop request' }));
+    } finally {
+      setRejecting(false);
+    }
+  };
+
+  // Counts for tabs
+  const pendingCount = requests.filter((r) => r.status === 'pending').length;
+  const approvedCount = requests.filter((r) => r.status === 'approved').length;
+  const rejectedCount = requests.filter((r) => r.status === 'rejected').length;
+
+  const filteredRequests = requests.filter((r) => {
+    if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+    if (!q) return true;
+    const searchTarget = [r.shopName, r.ownerName, r.mobile, r.city, r.address, r.email]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return searchTarget.includes(q.toLowerCase());
+  });
+
+  return (
+    <Shell
+      title="Shop Registration Requests"
+      subtitle="Review barber registration applications. Approving or rejecting automatically dispatches WhatsApp messages with login URLs & credentials."
+      links={adminLinks}
+      actions={
+        <button
+          onClick={loadData}
+          className="btn-o p-2 text-stone-600 hover:text-stone-900"
+          title="Refresh Requests"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-amber-600' : ''}`} />
+        </button>
+      }
+    >
+      {/* Top Filter Bar: Status Tabs + Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Status Pill Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-stone-100 rounded-2xl w-fit overflow-x-auto text-xs font-semibold">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`py-1.5 px-3 rounded-xl transition-all ${
+              statusFilter === 'all'
+                ? 'bg-white text-stone-900 shadow-xs'
+                : 'text-stone-500 hover:text-stone-800'
+            }`}
+          >
+            All ({requests.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('pending')}
+            className={`py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 ${
+              statusFilter === 'pending'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-amber-700 hover:bg-amber-50'
+            }`}
+          >
+            <span>Pending</span>
+            {pendingCount > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                statusFilter === 'pending' ? 'bg-amber-800 text-white' : 'bg-amber-200 text-amber-900'
+              }`}>
+                {pendingCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setStatusFilter('approved')}
+            className={`py-1.5 px-3 rounded-xl transition-all ${
+              statusFilter === 'approved'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-emerald-700 hover:bg-emerald-50'
+            }`}
+          >
+            Approved ({approvedCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter('rejected')}
+            className={`py-1.5 px-3 rounded-xl transition-all ${
+              statusFilter === 'rejected'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-rose-700 hover:bg-rose-50'
+            }`}
+          >
+            Rejected ({rejectedCount})
+          </button>
+        </div>
+
+        {/* Search Input */}
+        <div className="relative max-w-xs w-full">
+          <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            className="inp pl-9 pr-8 text-xs py-2 w-full"
+            placeholder="Search by shop, owner, mobile, city..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          {q && (
+            <button
+              onClick={() => setQ('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Requests Presentation */}
+      {loading ? (
+        <div className="card text-center py-16 px-4 space-y-3">
+          <RefreshCw className="w-8 h-8 text-amber-600 animate-spin mx-auto" />
+          <p className="text-sm font-semibold text-stone-700">Loading shop registration requests...</p>
+        </div>
+      ) : filteredRequests.length === 0 ? (
+        <div className="card text-center py-16 px-4 space-y-2">
+          <UserCheck className="w-12 h-12 text-stone-300 mx-auto" />
+          <h3 className="font-bold text-stone-800 text-base">No registration requests found</h3>
+          <p className="text-xs text-stone-500 max-w-sm mx-auto">
+            {q
+              ? 'No requests matched your search criteria.'
+              : statusFilter === 'pending'
+                ? 'There are currently no pending shop requests waiting for review.'
+                : 'Barbers can register their shop from the login page, and requests will appear here for your review.'}
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Mobile Cards (< lg) */}
+          <div className="grid grid-cols-1 gap-3.5 lg:hidden">
+            {filteredRequests.map((r) => {
+              const isPending = r.status === 'pending';
+              const isApproved = r.status === 'approved';
+              const isRejected = r.status === 'rejected';
+
+              return (
+                <div
+                  key={r._id}
+                  className={`card space-y-3 border transition-all ${
+                    isPending
+                      ? 'border-amber-200 bg-amber-50/10'
+                      : isApproved
+                        ? 'border-emerald-200 bg-emerald-50/10'
+                        : 'border-stone-200 bg-stone-50/30'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2 border-b border-stone-100 pb-2.5">
+                    <div>
+                      <h3 className="font-bold text-stone-900 text-base">{r.shopName}</h3>
+                      <p className="text-xs text-stone-500 flex items-center gap-1.5 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5 text-stone-400" />
+                        <span>{r.city || 'City not provided'}</span>
+                        {r.address && <span className="text-stone-400">• {r.address}</span>}
+                      </p>
+                    </div>
+
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                      isPending
+                        ? 'bg-amber-50 text-amber-800 border-amber-300'
+                        : isApproved
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          : 'bg-rose-50 text-rose-800 border-rose-300'
+                    }`}>
+                      {isPending ? (
+                        <>
+                          <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                          <span>Pending</span>
+                        </>
+                      ) : isApproved ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Approved</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Rejected</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Owner Name</span>
+                      <span className="font-semibold text-stone-800">{r.ownerName}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Owner Mobile</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="font-bold text-stone-900">{r.mobile}</span>
+                        <a
+                          href={`https://wa.me/91${r.mobile}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          title="Open WhatsApp Chat"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                        </a>
+                        <a
+                          href={`tel:${r.mobile}`}
+                          className="p-1 rounded bg-stone-100 text-stone-700 hover:bg-stone-200"
+                          title="Call Owner"
+                        >
+                          <Phone className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+
+                    {r.email && (
+                      <div className="col-span-2">
+                        <span className="text-stone-400 block text-[11px]">Email</span>
+                        <span className="text-stone-700">{r.email}</span>
+                      </div>
+                    )}
+
+                    <div className="col-span-2 text-[11px] text-stone-400">
+                      <span>Submitted: {new Date(r.createdAt).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Rejection Reason display */}
+                  {isRejected && r.rejectionReason && (
+                    <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-0.5">
+                      <span className="font-semibold block text-[11px] uppercase tracking-wider text-rose-900">
+                        Rejection Reason:
+                      </span>
+                      <p>{r.rejectionReason}</p>
+                    </div>
+                  )}
+
+                  {/* Approved shop details */}
+                  {isApproved && r.shopId && (
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between">
+                      <span>Shop Code: <b className="font-mono">{r.shopId.shopCode}</b></span>
+                      <a
+                        href={`/s/${r.shopId.shopCode}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-emerald-700 hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <span>Customer Link</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Actions Bar */}
+                  {isPending && (
+                    <div className="pt-2.5 border-t border-stone-100 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setRejectTarget(r);
+                          setRejectReason('Shop registration details could not be verified.');
+                        }}
+                        className="btn-o text-xs py-1.5 px-3 text-rose-600 hover:bg-rose-50 border-rose-200"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Reject</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setApproveTarget(r);
+                          setSelectedPlanId('');
+                        }}
+                        className="btn-brand text-xs py-1.5 px-3.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Approve & WhatsApp</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table (>= lg) */}
+          <div className="hidden lg:block card p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-stone-50/80 text-stone-500 border-b border-stone-200/80 text-xs uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th className="py-3.5 px-4">Shop & City</th>
+                    <th className="py-3.5 px-4">Owner Name</th>
+                    <th className="py-3.5 px-4">Mobile & WhatsApp</th>
+                    <th className="py-3.5 px-4">Date Applied</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {filteredRequests.map((r) => {
+                    const isPending = r.status === 'pending';
+                    const isApproved = r.status === 'approved';
+                    const isRejected = r.status === 'rejected';
+
+                    return (
+                      <tr key={r._id} className="hover:bg-stone-50/60 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-stone-900">{r.shopName}</div>
+                          <div className="text-xs text-stone-400 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 text-stone-400 shrink-0" />
+                            <span>{r.city || 'No city'}</span>
+                            {r.address && <span className="truncate max-w-[150px]">• {r.address}</span>}
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <div className="font-medium text-stone-800">{r.ownerName}</div>
+                          {r.email && <div className="text-xs text-stone-400">{r.email}</div>}
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-stone-900">{r.mobile}</span>
+                            <a
+                              href={`https://wa.me/91${r.mobile}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                              title="Chat on WhatsApp"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                            </a>
+                            <a
+                              href={`tel:${r.mobile}`}
+                              className="p-1 rounded-md bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors"
+                              title="Call"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-xs text-stone-500 whitespace-nowrap">
+                          {new Date(r.createdAt).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${
+                            isPending
+                              ? 'bg-amber-50 text-amber-800 border-amber-300'
+                              : isApproved
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : 'bg-rose-50 text-rose-800 border-rose-300'
+                          }`}>
+                            {isPending ? (
+                              <>
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                <span>Pending</span>
+                              </>
+                            ) : isApproved ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Approved</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="w-3 h-3 text-rose-600" />
+                                <span>Rejected</span>
+                              </>
+                            )}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          {isPending ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setRejectTarget(r);
+                                  setRejectReason('Shop registration details could not be verified.');
+                                }}
+                                className="btn-o text-xs py-1 px-2.5 text-rose-600 hover:bg-rose-50 border-rose-200"
+                                title="Reject Request"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>Reject</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setApproveTarget(r);
+                                  setSelectedPlanId('');
+                                }}
+                                className="btn-brand text-xs py-1 px-3 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+                                title="Approve Shop & Send WhatsApp Login Message"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Approve & WhatsApp</span>
+                              </button>
+                            </div>
+                          ) : isApproved ? (
+                            <span className="text-xs text-stone-500 font-medium">
+                              Code: <strong className="font-mono text-stone-800">{r.shopId?.shopCode || 'Active'}</strong>
+                            </span>
+                          ) : (
+                            <span className="text-xs text-rose-500 italic truncate max-w-[150px] inline-block" title={r.rejectionReason}>
+                              {r.rejectionReason || 'Rejected'}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="py-2.5 px-4 bg-stone-50/50 border-t border-stone-100 text-xs text-stone-500 flex justify-between items-center">
+              <span>Showing {filteredRequests.length} requests</span>
+              <span className="text-emerald-700 font-medium flex items-center gap-1">
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>Automated WhatsApp enabled</span>
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Approve Shop Modal */}
+      {approveTarget && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4">
+            <div className="flex items-start justify-between pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-stone-900 text-base">Approve Shop Registration</h3>
+                  <p className="text-xs text-stone-500">Authorize salon and send WhatsApp login credentials</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setApproveTarget(null)}
+                className="text-stone-400 hover:text-stone-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Shop Summary */}
+            <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-stone-500">Shop Name:</span>
+                <span className="font-bold text-stone-900">{approveTarget.shopName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Owner Name:</span>
+                <span className="font-semibold text-stone-800">{approveTarget.ownerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Registered Mobile:</span>
+                <span className="font-bold text-emerald-700 flex items-center gap-1">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  +91 {approveTarget.mobile}
+                </span>
+              </div>
+              {approveTarget.city && (
+                <div className="flex justify-between">
+                  <span className="text-stone-500">Location:</span>
+                  <span className="text-stone-800">{approveTarget.city}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Subscription Plan Picker */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-stone-700 block">
+                Assign Subscription Plan
+              </label>
+              <select
+                className="inp text-xs py-2"
+                value={selectedPlanId}
+                onChange={(e) => setSelectedPlanId(e.target.value)}
+              >
+                <option value="">Default Free Trial (14 days)</option>
+                {plans.map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.name} - ₹{p.price}/mo
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* WhatsApp Notification Notice */}
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
+              <p className="font-bold flex items-center gap-1.5 text-emerald-800">
+                <MessageCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>Instant WhatsApp Message</span>
+              </p>
+              <p className="text-[11px] text-emerald-800/90 leading-relaxed">
+                An automated message will be sent to <b>+91 {approveTarget.mobile}</b> with the Barber Login URL, instructions to log in, and customer booking link.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+              <button
+                type="button"
+                onClick={() => setApproveTarget(null)}
+                className="btn-o text-xs py-2 px-3.5"
+                disabled={approving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApprove}
+                disabled={approving}
+                className="btn-brand text-xs py-2 px-4 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 flex items-center gap-1.5"
+              >
+                {approving ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Approving & Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Confirm Approval & Send WhatsApp</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Shop Modal */}
+      {rejectTarget && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4">
+            <div className="flex items-start justify-between pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200">
+                  <XCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-stone-900 text-base">Reject Registration Request</h3>
+                  <p className="text-xs text-stone-500">Decline application and notify barber via WhatsApp</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRejectTarget(null)}
+                className="text-stone-400 hover:text-stone-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Shop Summary */}
+            <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-stone-500">Shop Name:</span>
+                <span className="font-bold text-stone-900">{rejectTarget.shopName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Owner Name:</span>
+                <span className="font-semibold text-stone-800">{rejectTarget.ownerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Mobile:</span>
+                <span className="font-semibold text-stone-800">+91 {rejectTarget.mobile}</span>
+              </div>
+            </div>
+
+            {/* Rejection Reason */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-stone-700 block">
+                Reason for Rejection * (sent to barber via WhatsApp)
+              </label>
+              <textarea
+                className="inp text-xs py-2 min-h-[75px] w-full"
+                rows={3}
+                placeholder="Explain why the registration was rejected..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+
+              {/* Quick Reason Chips */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {[
+                  'Incomplete shop details',
+                  'Unverifiable phone number',
+                  'Duplicate registration',
+                  'Outside service coverage'
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setRejectReason(chip)}
+                    className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 transition-colors"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Warning Note */}
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+              <p className="font-bold flex items-center gap-1.5 text-rose-900">
+                <MessageCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>WhatsApp Notification Notice</span>
+              </p>
+              <p className="text-[11px] text-rose-800/90 leading-relaxed">
+                The owner at <b>+91 {rejectTarget.mobile}</b> will receive a direct WhatsApp notification informing them of the rejection and the reason.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+              <button
+                type="button"
+                onClick={() => setRejectTarget(null)}
+                className="btn-o text-xs py-2 px-3.5"
+                disabled={rejecting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleReject}
+                disabled={rejecting || !rejectReason.trim()}
+                className="btn-brand text-xs py-2 px-4 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 flex items-center gap-1.5"
+              >
+                {rejecting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Rejecting & Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="w-3.5 h-3.5" />
+                    <span>Reject & Send WhatsApp</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Shell>
+  );
+}
+
 export default function Admin() {
   return (
     <Routes>
       <Route index element={<Dash />} />
       <Route path="shops" element={<Shops />} />
+      <Route path="requests" element={<ShopRequests />} />
     </Routes>
   );
 }

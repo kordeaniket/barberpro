@@ -935,6 +935,20 @@ function Appts() {
     }
   };
 
+  const [sendingReminderId, setSendingReminderId] = useState(null);
+  const sendReminder = async (apptId) => {
+    try {
+      setSendingReminderId(apptId);
+      const res = await api.post(`/barber/appointments/${apptId}/send-reminder`);
+      d(ui.actions.setMsg({ type: 'ok', text: res.data?.message || '1-Hour WhatsApp reminder sent to client & barber!' }));
+      refreshAll();
+    } catch (err) {
+      d(ui.actions.setMsg({ type: 'error', text: err.response?.data?.message || 'Failed to send WhatsApp reminder' }));
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
+
   // Invoice / Bill complete
   const confirmBill = async () => {
     if (billingTarget) {
@@ -1588,13 +1602,31 @@ function Appts() {
                               {['confirmed', 'in_progress'].includes(a.status) && (
                                 <>
                                   {a.status === 'confirmed' && (
-                                    <button
-                                      onClick={() => setStatus(a._id, 'in_progress')}
-                                      className="btn-o text-xs py-1 px-2.5 hover:border-indigo-400 hover:text-indigo-700"
-                                      title="Mark in progress (in chair)"
-                                    >
-                                      <ArmchairIcon className="w-3.5 h-3.5" />
-                                    </button>
+                                    <>
+                                      <button
+                                        onClick={() => setStatus(a._id, 'in_progress')}
+                                        className="btn-o text-xs py-1 px-2.5 hover:border-indigo-400 hover:text-indigo-700"
+                                        title="Mark in progress (in chair)"
+                                      >
+                                        <ArmchairIcon className="w-3.5 h-3.5" />
+                                      </button>
+
+                                      <button
+                                        onClick={() => sendReminder(a._id)}
+                                        disabled={sendingReminderId === a._id}
+                                        className={`btn-o text-xs py-1 px-2 transition-colors ${a.reminded1h
+                                            ? 'text-emerald-700 bg-emerald-50 border-emerald-300 hover:bg-emerald-100'
+                                            : 'text-stone-600 hover:text-emerald-700 hover:border-emerald-300'
+                                          }`}
+                                        title={a.reminded1h ? '1-Hour WhatsApp reminder already sent (click to resend)' : 'Send 1-Hour WhatsApp reminder to client & barber'}
+                                      >
+                                        {sendingReminderId === a._id ? (
+                                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                                        ) : (
+                                          <MessageCircle className={`w-3.5 h-3.5 ${a.reminded1h ? 'text-emerald-600' : ''}`} />
+                                        )}
+                                      </button>
+                                    </>
                                   )}
 
                                   <button

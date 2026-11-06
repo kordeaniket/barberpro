@@ -1,6 +1,6 @@
 const r = require('express').Router();
 const bcrypt = require('bcryptjs'); const jwt = require('jsonwebtoken'); const crypto = require('crypto');
-const { User, Shop, Customer } = require('../models');
+const { User, Shop, Customer, ShopRequest } = require('../models');
 const { auth, sign, signRefresh } = require('../middleware/auth');
 const { wrap, need } = require('../utils/helpers');
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
@@ -32,7 +32,23 @@ r.post('/login', wrap(async (req, res) => {
   const u = await User.findOne({
     $or: [{ mobile: input }, { email: input.toLowerCase() }]
   });
-  if (!u || !u.active || !(await bcrypt.compare(password, u.passwordHash))) return res.status(401).json({ message: 'Invalid mobile or password' });
+  if (!u) {
+    const pendingReq = await ShopRequest.findOne({ mobile: input, status: 'pending' });
+    if (pendingReq) {
+      return res.status(403).json({
+        message: 'Your shop registration request is pending approval by Super Admin. You will receive a WhatsApp message once approved.'
+      });
+    }
+    const rejectedReq = await ShopRequest.findOne({ mobile: input, status: 'rejected' });
+    if (rejectedReq) {
+      return res.status(403).json({
+        message: `Your shop registration request was not approved: ${rejectedReq.rejectionReason || 'Please contact support.'}`
+      });
+    }
+    return res.status(401).json({ message: 'Invalid mobile or password' });
+  }
+  if (!u.active) return res.status(403).json({ message: 'Your account is deactivated. Please contact administrator.' });
+  if (!(await bcrypt.compare(password, u.passwordHash))) return res.status(401).json({ message: 'Invalid mobile or password' });
   res.json(await issue(u));
 }));
 r.post('/refresh', wrap(async (req, res) => {
@@ -57,5 +73,42 @@ r.post('/register-customer', wrap(async (req, res) => {
   const u = await User.create({ name: req.body.name, mobile: req.body.mobile, email: req.body.email, role: 'customer', shopId: shop._id, passwordHash: await bcrypt.hash(req.body.password, 10) });
   await Customer.findOneAndUpdate({ shopId: shop._id, mobile: u.mobile }, { shopId: shop._id, mobile: u.mobile, name: u.name, email: u.email, userId: u._id }, { upsert: true });
   res.status(201).json(await issue(u));
+}));
+r.post('/register-shop', wrap(async (req, res) => {
+  need(req.body, ['shopName', 'ownerName', 'mobile', 'password']);
+  const mobile = String(req.body.mobile || '').replace(/\D/g, '').slice(-10);
+  if (mobile.length !== 10) {
+    return res.status(400).json({ message: 'Please enter a valid 10-digit mobile number' });
+  }
+  if (String(req.body.password).length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters' });
+  }
+
+  const existingUser = await User.findOne({ mobile });
+  if (existingUser) {
+    return res.status(409).json({ message: 'This mobile number is already registered. Please log in with your credentials.' });
+  }
+
+  const existingReq = await ShopRequest.findOne({ mobile, status: 'pending' });
+  if (existingReq) {
+    return res.status(409).json({ message: 'A shop registration request for this mobile is already pending approval by Super Admin.' });
+  }
+
+  const passwordHash = await bcrypt.hash(String(req.body.password), 10);
+  const shopReq = await ShopRequest.create({
+    shopName: String(req.body.shopName).trim(),
+    ownerName: String(req.body.ownerName).trim(),
+    mobile,
+    email: req.body.email ? String(req.body.email).trim().toLowerCase() : undefined,
+    city: req.body.city ? String(req.body.city).trim() : undefined,
+    address: req.body.address ? String(req.body.address).trim() : undefined,
+    passwordHash,
+    status: 'pending'
+  });
+
+  res.status(201).json({
+    message: 'Shop registration request submitted successfully! Super Admin will review your request and you will receive a WhatsApp message once approved.',
+    requestId: shopReq._id
+  });
 }));
 module.exports = r;
