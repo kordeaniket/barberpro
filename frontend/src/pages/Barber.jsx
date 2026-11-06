@@ -69,7 +69,9 @@ import {
   Armchair,
   ArmchairIcon,
   Download,
-  LogOut
+  LogOut,
+  QrCode,
+  Smartphone
 } from 'lucide-react';
 
 const barberLinks = [
@@ -2116,7 +2118,12 @@ function StoreAndProfile() {
     closeTime: '21:00',
     holidays: [],
     logoUrl: '',
-    description: ''
+    description: '',
+    upiId: '',
+    gpayNumber: '',
+    phonePeNumber: '',
+    upiQrUrl: '',
+    acceptOnlinePayment: false
   });
   const [userForm, setUserForm] = useState({
     name: '',
@@ -2127,6 +2134,8 @@ function StoreAndProfile() {
   const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
   const [showPwModal, setShowPwModal] = useState(false);
   const [logoImgError, setLogoImgError] = useState(false);
+  const [qrImgError, setQrImgError] = useState(false);
+  const [copiedUpi, setCopiedUpi] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Load shop and profile data
@@ -2148,7 +2157,12 @@ function StoreAndProfile() {
           logoUrl: s.logoUrl || '',
           description: s.description || '',
           shopCode: s.shopCode,
-          customerLink: shopRes.data.customerLink
+          customerLink: shopRes.data.customerLink,
+          upiId: s.upiId || '',
+          gpayNumber: s.gpayNumber || '',
+          phonePeNumber: s.phonePeNumber || '',
+          upiQrUrl: s.upiQrUrl || '',
+          acceptOnlinePayment: !!s.acceptOnlinePayment
         });
         setUserForm({
           name: u.name || '',
@@ -2190,6 +2204,23 @@ function StoreAndProfile() {
     d(auth.actions.updateUserShop({
       name: shopForm.name,
       logoUrl: shopForm.logoUrl
+    }));
+  };
+
+  const savePayments = (e) => {
+    e.preventDefault();
+    const payload = {
+      upiId: (shopForm.upiId || '').trim(),
+      gpayNumber: (shopForm.gpayNumber || '').trim(),
+      phonePeNumber: (shopForm.phonePeNumber || '').trim(),
+      upiQrUrl: (shopForm.upiQrUrl || '').trim(),
+      acceptOnlinePayment: !!shopForm.acceptOnlinePayment
+    };
+    d(ui.actions.submitRequest({
+      method: 'patch',
+      url: '/barber/shop',
+      body: payload,
+      refresh: { key: 'shopinfo', url: '/barber/shop' }
     }));
   };
 
@@ -2268,6 +2299,17 @@ function StoreAndProfile() {
         >
           <User className="w-4 h-4" />
           <span>Barber Personal Profile</span>
+        </button>
+
+        <button
+          onClick={() => setTab('payments')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'payments'
+            ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
+            : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+            }`}
+        >
+          <Wallet className="w-4 h-4" />
+          <span>UPI & Online Payments</span>
         </button>
 
         <button
@@ -2578,6 +2620,328 @@ function StoreAndProfile() {
                 <span>Sign Out</span>
               </button>
             </div>
+          </div>
+        </form>
+      )}
+
+      {/* Tab 3: UPI & Online Payments */}
+      {tab === 'payments' && (
+        <form onSubmit={savePayments} className="space-y-6 animate-in fade-in duration-150">
+          {/* Top Banner / Status Switch */}
+          <div className="card p-5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-amber-600" />
+                  <h3 className="font-bold text-base text-stone-900">Accept Online UPI & App Payments</h3>
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                    shopForm.acceptOnlinePayment
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-stone-200 text-stone-600 border border-stone-300'
+                  }`}>
+                    {shopForm.acceptOnlinePayment ? 'Active' : 'Disabled'}
+                  </span>
+                </div>
+                <p className="text-xs text-stone-600 max-w-xl">
+                  Allow your clients to directly pay via UPI ID, Google Pay, PhonePe, or scan your custom/auto-generated QR code before or after their haircut appointment.
+                </p>
+              </div>
+
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={!!shopForm.acceptOnlinePayment}
+                  onChange={(e) => setShopForm({ ...shopForm, acceptOnlinePayment: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                <span className="ml-2.5 text-xs font-semibold text-stone-800">
+                  {shopForm.acceptOnlinePayment ? 'Enabled' : 'Disabled'}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Table of Payment Options */}
+          <div className="card p-5 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+              <h3 className="font-bold text-base text-stone-900 flex items-center gap-2">
+                <Table className="w-5 h-5 text-amber-600" />
+                <span>UPI & Payment Methods Configuration</span>
+              </h3>
+              <span className="text-xs text-stone-500">Configure Indian Payment Details</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border border-stone-200 rounded-xl overflow-hidden">
+                <thead className="bg-stone-100 text-stone-700 font-semibold uppercase text-[10px] tracking-wider border-b border-stone-200">
+                  <tr>
+                    <th className="py-3 px-4">Payment Method</th>
+                    <th className="py-3 px-4">Setting / Value</th>
+                    <th className="py-3 px-4">Customer Experience</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-200">
+                  {/* Row 1: UPI ID */}
+                  <tr className="hover:bg-stone-50/50">
+                    <td className="py-3.5 px-4 font-semibold text-stone-900 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs border border-amber-200">
+                          UPI
+                        </div>
+                        <div>
+                          <span>UPI ID / VPA</span>
+                          <span className="block text-[10px] text-stone-500 font-normal">Primary Indian Virtual Address</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 min-w-[240px]">
+                      <input
+                        type="text"
+                        className="inp text-xs py-1.5"
+                        placeholder="e.g. 9876543210@ybl or shop@oksbi"
+                        value={shopForm.upiId || ''}
+                        onChange={(e) => setShopForm({ ...shopForm, upiId: e.target.value })}
+                      />
+                    </td>
+                    <td className="py-3.5 px-4 text-stone-600 text-[11px]">
+                      Enables 1-click UPI app launch & auto-generates dynamic QR code for exact appointment amount.
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      {shopForm.upiId ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <Check className="w-3 h-3" /> Configured
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[11px] text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
+                          Not set
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Row 2: Google Pay Number */}
+                  <tr className="hover:bg-stone-50/50">
+                    <td className="py-3.5 px-4 font-semibold text-stone-900 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-xs border border-blue-200">
+                          G
+                        </div>
+                        <div>
+                          <span>Google Pay Number</span>
+                          <span className="block text-[10px] text-stone-500 font-normal">GPay registered mobile</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 min-w-[240px]">
+                      <input
+                        type="tel"
+                        maxLength={10}
+                        className="inp text-xs py-1.5"
+                        placeholder="10-digit mobile number"
+                        value={shopForm.gpayNumber || ''}
+                        onChange={(e) => setShopForm({ ...shopForm, gpayNumber: e.target.value.replace(/\D/g, '') })}
+                      />
+                    </td>
+                    <td className="py-3.5 px-4 text-stone-600 text-[11px]">
+                      Direct redirect to Google Pay (tez://) & displays 1-click copy mobile number.
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      {shopForm.gpayNumber && shopForm.gpayNumber.length === 10 ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <Check className="w-3 h-3" /> Ready
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[11px] text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
+                          Optional
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Row 3: PhonePe Number */}
+                  <tr className="hover:bg-stone-50/50">
+                    <td className="py-3.5 px-4 font-semibold text-stone-900 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-xs border border-purple-200">
+                          Pe
+                        </div>
+                        <div>
+                          <span>PhonePe Number</span>
+                          <span className="block text-[10px] text-stone-500 font-normal">PhonePe registered mobile</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 min-w-[240px]">
+                      <input
+                        type="tel"
+                        maxLength={10}
+                        className="inp text-xs py-1.5"
+                        placeholder="10-digit mobile number"
+                        value={shopForm.phonePeNumber || ''}
+                        onChange={(e) => setShopForm({ ...shopForm, phonePeNumber: e.target.value.replace(/\D/g, '') })}
+                      />
+                    </td>
+                    <td className="py-3.5 px-4 text-stone-600 text-[11px]">
+                      Direct redirect to PhonePe (phonepe://) & displays 1-click copy mobile number.
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      {shopForm.phonePeNumber && shopForm.phonePeNumber.length === 10 ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <Check className="w-3 h-3" /> Ready
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[11px] text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
+                          Optional
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Row 4: Custom QR Image URL */}
+                  <tr className="hover:bg-stone-50/50">
+                    <td className="py-3.5 px-4 font-semibold text-stone-900 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-stone-100 text-stone-700 flex items-center justify-center font-bold text-xs border border-stone-300">
+                          <QrCode className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span>Custom QR Code Image URL</span>
+                          <span className="block text-[10px] text-stone-500 font-normal">Your physical standee QR photo</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 min-w-[240px]">
+                      <input
+                        type="url"
+                        className="inp text-xs py-1.5"
+                        placeholder="https://example.com/my-shop-qr.png"
+                        value={shopForm.upiQrUrl || ''}
+                        onChange={(e) => {
+                          setQrImgError(false);
+                          setShopForm({ ...shopForm, upiQrUrl: e.target.value });
+                        }}
+                      />
+                    </td>
+                    <td className="py-3.5 px-4 text-stone-600 text-[11px]">
+                      Displays your exact physical shop QR code image for customer scanning.
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      {shopForm.upiQrUrl ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <Check className="w-3 h-3" /> Uploaded
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[11px] text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
+                          Auto-generated
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Live Preview Card */}
+          <div className="card p-5 space-y-4">
+            <h3 className="font-bold text-base text-stone-900 flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-amber-600" />
+              <span>Customer Payment View & QR Code Preview</span>
+            </h3>
+            <p className="text-xs text-stone-500">
+              This is how the payment options and QR code will appear to your customers during and after appointment booking.
+            </p>
+
+            <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 flex flex-col md:flex-row items-center gap-6">
+              {/* QR Display */}
+              <div className="p-3 bg-white border-2 border-stone-200 rounded-2xl shadow-sm text-center shrink-0">
+                {shopForm.upiQrUrl && !qrImgError ? (
+                  <div className="space-y-1">
+                    <img
+                      src={shopForm.upiQrUrl}
+                      alt="Shop UPI QR"
+                      onError={() => setQrImgError(true)}
+                      className="w-40 h-40 object-contain mx-auto rounded-lg"
+                    />
+                    <span className="text-[10px] text-stone-500 font-medium block">Custom Shop QR</span>
+                  </div>
+                ) : shopForm.upiId ? (
+                  <div className="space-y-1">
+                    <QRCodeSVG
+                      value={`upi://pay?pa=${encodeURIComponent(shopForm.upiId)}&pn=${encodeURIComponent(shopForm.name || 'BarberPro')}&cu=INR`}
+                      size={160}
+                      level="H"
+                      includeMargin={true}
+                      bgColor="#FFFFFF"
+                      fgColor="#1c1917"
+                    />
+                    <span className="text-[10px] text-emerald-600 font-medium block">Auto-Generated Dynamic QR</span>
+                  </div>
+                ) : (
+                  <div className="w-40 h-40 flex flex-col items-center justify-center text-stone-400 bg-stone-100 rounded-xl p-3">
+                    <QrCode className="w-10 h-10 mb-2 opacity-40" />
+                    <span className="text-[11px] text-center">Add UPI ID or QR image URL above</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Details & Live Action Previews */}
+              <div className="flex-1 w-full space-y-3">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-stone-900 text-sm">{shopForm.name || 'Barber Shop'}</h4>
+                  <p className="text-xs text-stone-500">
+                    UPI ID: <span className="font-mono font-semibold text-stone-800">{shopForm.upiId || 'Not configured'}</span>
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-white border border-stone-200 space-y-1">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase block">Google Pay Number</span>
+                    <span className="font-mono font-bold text-stone-800">{shopForm.gpayNumber || shopForm.mobile || '—'}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white border border-stone-200 space-y-1">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase block">PhonePe Number</span>
+                    <span className="font-mono font-bold text-stone-800">{shopForm.phonePeNumber || shopForm.mobile || '—'}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {shopForm.upiId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(shopForm.upiId);
+                        setCopiedUpi(true);
+                        setTimeout(() => setCopiedUpi(false), 2000);
+                      }}
+                      className="btn-o text-xs py-1.5 px-3 flex items-center gap-1.5"
+                    >
+                      {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedUpi ? 'Copied UPI ID!' : 'Copy UPI ID'}</span>
+                    </button>
+                  )}
+                  {shopForm.upiId && (
+                    <a
+                      href={`upi://pay?pa=${encodeURIComponent(shopForm.upiId)}&pn=${encodeURIComponent(shopForm.name || 'Barber')}&cu=INR`}
+                      className="btn-o text-xs py-1.5 px-3 flex items-center gap-1.5 text-amber-700 hover:bg-amber-50"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Test UPI Deep Link</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <div className="flex justify-end gap-3">
+            <button type="submit" className="btn-brand px-6 py-2.5">
+              <Save className="w-4 h-4" />
+              <span>Save Payment Settings</span>
+            </button>
           </div>
         </form>
       )}

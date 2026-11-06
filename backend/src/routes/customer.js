@@ -11,7 +11,9 @@ r.get('/public/shop/:code', wrap(async (req, res) => {
     shop: {
       name: s.name, address: s.address, city: s.city, openMin: s.openMin,
       closeMin: s.closeMin, shopCode: s.shopCode, logoUrl: s.logoUrl,
-      bannerUrl: s.bannerUrl, description: s.description
+      bannerUrl: s.bannerUrl, description: s.description,
+      upiId: s.upiId, gpayNumber: s.gpayNumber, phonePeNumber: s.phonePeNumber,
+      upiQrUrl: s.upiQrUrl, acceptOnlinePayment: !!s.acceptOnlinePayment, ownerMobile: s.mobile
     },
     services: await Service.find({ shopId: s._id, active: true })
   });
@@ -48,7 +50,11 @@ r.get('/profile', wrap(async (req, res) => {
   res.json({
     user: { id: req.user._id, name: req.user.name, mobile: req.user.mobile, email: req.user.email, avatarUrl: req.user.avatarUrl },
     customer: cust,
-    shop: { name: req.shop.name, city: req.shop.city, shopCode: req.shop.shopCode, logoUrl: req.shop.logoUrl }
+    shop: {
+      name: req.shop.name, city: req.shop.city, shopCode: req.shop.shopCode, logoUrl: req.shop.logoUrl,
+      upiId: req.shop.upiId, gpayNumber: req.shop.gpayNumber, phonePeNumber: req.shop.phonePeNumber,
+      upiQrUrl: req.shop.upiQrUrl, acceptOnlinePayment: !!req.shop.acceptOnlinePayment, ownerMobile: req.shop.mobile
+    }
   });
 }));
 

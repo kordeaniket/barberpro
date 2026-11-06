@@ -22,6 +22,8 @@ const Shop = mongoose.model('Shop', new Schema({
   status: { type: String, enum: ['active', 'inactive', 'suspended'], default: 'active' },
   shopCode: { type: String, unique: true },
   logoUrl: String, bannerUrl: String, description: String,
+  upiId: String, gpayNumber: String, phonePeNumber: String,
+  upiQrUrl: String, acceptOnlinePayment: { type: Boolean, default: false },
 }, T));
 const Service = mongoose.model('Service', new Schema({
   shopId: { ...ref('Shop'), required: true, index: true }, name: { type: String, required: true },

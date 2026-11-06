@@ -28,7 +28,7 @@ r.patch('/profile', wrap(async (req, res) => {
 }));
 
 r.patch('/shop', wrap(async (req, res) => {
-  const allowed = ['name', 'ownerName', 'mobile', 'email', 'address', 'city', 'openMin', 'closeMin', 'holidays', 'logoUrl', 'bannerUrl', 'description'];
+  const allowed = ['name', 'ownerName', 'mobile', 'email', 'address', 'city', 'openMin', 'closeMin', 'holidays', 'logoUrl', 'bannerUrl', 'description', 'upiId', 'gpayNumber', 'phonePeNumber', 'upiQrUrl', 'acceptOnlinePayment'];
   const updateData = pick(req.body, allowed);
   if (updateData.openMin !== undefined) updateData.openMin = Number(updateData.openMin);
   if (updateData.closeMin !== undefined) updateData.closeMin = Number(updateData.closeMin);

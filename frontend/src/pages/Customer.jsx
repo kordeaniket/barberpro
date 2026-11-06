@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { QRCodeSVG } from 'qrcode.react';
 import api, { saveSession, clearSession } from '../api';
 import { fmt } from '../components/Shell';
 import ConfirmModal from '../components/Modal';
@@ -44,7 +45,13 @@ import {
   ChevronLeft,
   XCircle,
   RefreshCw,
-  LogOutIcon
+  LogOutIcon,
+  Wallet,
+  CreditCard,
+  QrCode,
+  Smartphone,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 
 function playNotificationChime() {
@@ -311,6 +318,10 @@ export default function Customer() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
   const [pwError, setPwError] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentAppointment, setPaymentAppointment] = useState(null);
+  const [copiedField, setCopiedField] = useState('');
+  const [paymentDoneMsg, setPaymentDoneMsg] = useState('');
 
   // Appointments Filter
   const [apptFilter, setApptFilter] = useState('all'); // 'all' | 'active' | 'completed' | 'cancelled'
@@ -611,6 +622,10 @@ export default function Customer() {
       loadProfile();
       setShowConfirmBookingModal(false);
       setSelectedSlot(null);
+      if (data?.data && (shopInfo?.shop?.acceptOnlinePayment || shopInfo?.shop?.upiId || shopInfo?.shop?.gpayNumber || shopInfo?.shop?.phonePeNumber)) {
+        setPaymentAppointment(data.data);
+        setShowPaymentModal(true);
+      }
       // Switch to bookings tab after short delay
       setTimeout(() => {
         setActiveTab('appointments');
@@ -1063,9 +1078,24 @@ export default function Customer() {
 
                     {/* Quick Action buttons */}
                     <div className="pt-2 border-t border-stone-800/80 flex items-center gap-2 relative z-10">
+                      {(shopInfo?.shop?.acceptOnlinePayment || shopInfo?.shop?.upiId || shopInfo?.shop?.gpayNumber || shopInfo?.shop?.phonePeNumber) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPaymentAppointment(currentOrNextToday);
+                            setShowPaymentModal(true);
+                          }}
+                          className="flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/30 transition-all active:scale-[0.98]"
+                        >
+                          <Wallet className="w-3.5 h-3.5" />
+                          <span>Pay Online (₹{currentOrNextToday.price})</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => setActiveTab('appointments')}
-                        className="flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/30 transition-all active:scale-[0.98]"
+                        className={`py-2 px-3 rounded-xl bg-[#22242f] hover:bg-[#2b2d3b] text-stone-200 border border-stone-700/80 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                          !(shopInfo?.shop?.acceptOnlinePayment || shopInfo?.shop?.upiId || shopInfo?.shop?.gpayNumber || shopInfo?.shop?.phonePeNumber) ? 'flex-1' : ''
+                        }`}
                       >
                         <CalendarCheck className="w-3.5 h-3.5" />
                         <span>Track Booking</span>
@@ -1525,6 +1555,7 @@ export default function Customer() {
                           <th className="py-2.5 px-3">Date & Time</th>
                           <th className="py-2.5 px-3">Price</th>
                           <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3 text-center">Pay Online</th>
                           <th className="py-2.5 px-3 text-center">Cancel</th>
                         </tr>
                       </thead>
@@ -1559,6 +1590,26 @@ export default function Customer() {
                             {/* Status */}
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               <StatusBadge status={b.status} />
+                            </td>
+
+                            {/* Pay Online Action Button */}
+                            <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                              {!['cancelled', 'rejected'].includes(b.status) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPaymentAppointment(b);
+                                    setShowPaymentModal(true);
+                                  }}
+                                  title="Pay via UPI, GPay, PhonePe, or QR"
+                                  className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-400 hover:bg-amber-500 hover:text-stone-900 border border-amber-500/30 font-semibold text-[11px] transition-all inline-flex items-center gap-1 active:scale-95"
+                                >
+                                  <Wallet className="w-3 h-3" />
+                                  <span>Pay Now</span>
+                                </button>
+                              ) : (
+                                <span className="text-stone-600 text-xs">—</span>
+                              )}
                             </td>
 
                             {/* Cancel Action Icon */}
@@ -2247,6 +2298,282 @@ export default function Customer() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* 5. Online UPI / App Payment Modal */}
+      {showPaymentModal && paymentAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="card max-w-md w-full max-h-[92vh] overflow-y-auto space-y-4 shadow-float border border-stone-200">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center font-bold">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-stone-900 text-sm">Pay Online</h3>
+                  <p className="text-[10px] text-stone-500">Fast & Secure UPI / App Transfer</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPaymentAppointment(null);
+                  setPaymentDoneMsg('');
+                }}
+                className="p-1 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Bill Summary Card */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-stone-600">Barbershop</span>
+                <span className="font-bold text-stone-900">{shopInfo?.shop?.name || 'BarberPro Salon'}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-stone-600">Service</span>
+                <span className="font-semibold text-stone-800 truncate max-w-[200px]">{paymentAppointment.serviceName}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-stone-600">Booking Time</span>
+                <span className="text-stone-700 font-medium">{paymentAppointment.date} at {fmt(paymentAppointment.startMin)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-amber-200/60 text-sm">
+                <span className="font-bold text-stone-800">Amount to Pay</span>
+                <span className="font-black text-amber-700 text-lg">₹{paymentAppointment.price}</span>
+              </div>
+            </div>
+
+            {/* Payment Done Success Toast Banner */}
+            {paymentDoneMsg && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in zoom-in-95">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{paymentDoneMsg}</span>
+              </div>
+            )}
+
+            {/* SECTION 1: 1-Click UPI Apps (Google Pay, PhonePe, Paytm, Any UPI) */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+                1. One-Click App Payment (UPI Intent)
+              </span>
+
+              <div className="grid grid-cols-2 gap-2">
+                {/* Google Pay */}
+                <a
+                  href={
+                    shopInfo?.shop?.upiId
+                      ? `tez://upi/pay?pa=${encodeURIComponent(shopInfo.shop.upiId)}&pn=${encodeURIComponent(shopInfo?.shop?.name || 'BarberPro')}&am=${paymentAppointment.price}&cu=INR&tn=${encodeURIComponent('BarberPro Appointment')}`
+                      : shopInfo?.shop?.gpayNumber
+                      ? `tel:${shopInfo.shop.gpayNumber}`
+                      : '#'
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2.5 rounded-xl border border-stone-200 hover:border-blue-400 hover:bg-blue-50/50 flex items-center gap-2.5 transition-all text-left group"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 font-black text-xs flex items-center justify-center shrink-0 border border-blue-200">
+                    G
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-bold text-stone-900 text-xs block group-hover:text-blue-700">Google Pay</span>
+                    <span className="text-[10px] text-stone-500 block">Tap to open GPay</span>
+                  </div>
+                </a>
+
+                {/* PhonePe */}
+                <a
+                  href={
+                    shopInfo?.shop?.upiId
+                      ? `phonepe://pay?pa=${encodeURIComponent(shopInfo.shop.upiId)}&pn=${encodeURIComponent(shopInfo?.shop?.name || 'BarberPro')}&am=${paymentAppointment.price}&cu=INR&tn=${encodeURIComponent('BarberPro Appointment')}`
+                      : shopInfo?.shop?.phonePeNumber
+                      ? `tel:${shopInfo.shop.phonePeNumber}`
+                      : '#'
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2.5 rounded-xl border border-stone-200 hover:border-purple-400 hover:bg-purple-50/50 flex items-center gap-2.5 transition-all text-left group"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 font-black text-xs flex items-center justify-center shrink-0 border border-purple-200">
+                    Pe
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-bold text-stone-900 text-xs block group-hover:text-purple-700">PhonePe</span>
+                    <span className="text-[10px] text-stone-500 block">Tap to open PhonePe</span>
+                  </div>
+                </a>
+
+                {/* Generic UPI App (Paytm, BHIM, Cred) */}
+                <a
+                  href={
+                    shopInfo?.shop?.upiId
+                      ? `upi://pay?pa=${encodeURIComponent(shopInfo.shop.upiId)}&pn=${encodeURIComponent(shopInfo?.shop?.name || 'BarberPro')}&am=${paymentAppointment.price}&cu=INR&tn=${encodeURIComponent('BarberPro Appointment')}`
+                      : '#'
+                  }
+                  className="col-span-2 p-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center gap-2 transition-all font-semibold text-xs shadow-sm"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <span>Open Any UPI App (Paytm / BHIM / Cred)</span>
+                </a>
+              </div>
+            </div>
+
+            {/* SECTION 2: QR Code Scan (Dynamic or Custom Uploaded) */}
+            <div className="space-y-2 pt-1 border-t border-stone-100">
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+                2. Scan QR Code on Counter or Mobile
+              </span>
+
+              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                <div className="p-2.5 bg-white border border-stone-200 rounded-xl shadow-xs shrink-0">
+                  {shopInfo?.shop?.upiQrUrl ? (
+                    <img
+                      src={shopInfo.shop.upiQrUrl}
+                      alt="Barber QR Code"
+                      className="w-32 h-32 object-contain mx-auto rounded-lg"
+                    />
+                  ) : shopInfo?.shop?.upiId ? (
+                    <QRCodeSVG
+                      value={`upi://pay?pa=${encodeURIComponent(shopInfo.shop.upiId)}&pn=${encodeURIComponent(shopInfo?.shop?.name || 'Barber')}&am=${paymentAppointment.price}&cu=INR&tn=${encodeURIComponent('BarberPro Appointment')}`}
+                      size={128}
+                      level="H"
+                      includeMargin={true}
+                      bgColor="#FFFFFF"
+                      fgColor="#1c1917"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 flex flex-col items-center justify-center text-stone-400 bg-stone-100 rounded-lg">
+                      <QrCode className="w-8 h-8 opacity-40 mb-1" />
+                      <span className="text-[10px]">No QR code</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2 min-w-0 flex-1">
+                  <p className="text-xs text-stone-600 font-medium leading-relaxed">
+                    Scan with any UPI Scanner app or camera to pay <strong className="text-stone-900">₹{paymentAppointment.price}</strong> directly to barber.
+                  </p>
+
+                  {shopInfo?.shop?.upiId && (
+                    <div className="flex items-center gap-1.5 p-1.5 bg-white rounded-lg border border-stone-200">
+                      <span className="text-[11px] font-mono text-stone-700 truncate flex-1 font-semibold pl-1">
+                        {shopInfo.shop.upiId}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(shopInfo.shop.upiId);
+                          setCopiedField('upi');
+                          setTimeout(() => setCopiedField(''), 2000);
+                        }}
+                        className="btn-o py-1 px-2 text-[10px] shrink-0 flex items-center gap-1"
+                      >
+                        {copiedField === 'upi' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedField === 'upi' ? 'Copied!' : 'Copy UPI'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 3: Barber Direct Mobile Numbers for PhonePe / Google Pay */}
+            {(shopInfo?.shop?.gpayNumber || shopInfo?.shop?.phonePeNumber || shopInfo?.shop?.ownerMobile || shopInfo?.shop?.mobile) && (
+              <div className="space-y-2 pt-1 border-t border-stone-100">
+                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+                  3. Pay Directly to Barber's Mobile Number
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {/* GPay Number */}
+                  {(shopInfo?.shop?.gpayNumber || shopInfo?.shop?.ownerMobile || shopInfo?.shop?.mobile) && (
+                    <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] text-stone-500 uppercase font-bold block">Google Pay Number</span>
+                        <span className="font-mono font-bold text-stone-900">
+                          {shopInfo?.shop?.gpayNumber || shopInfo?.shop?.ownerMobile || shopInfo?.shop?.mobile}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const num = shopInfo?.shop?.gpayNumber || shopInfo?.shop?.ownerMobile || shopInfo?.shop?.mobile;
+                          navigator.clipboard.writeText(num);
+                          setCopiedField('gpay');
+                          setTimeout(() => setCopiedField(''), 2000);
+                        }}
+                        className="btn-o py-1 px-2 text-[10px] flex items-center gap-1 shrink-0"
+                      >
+                        {copiedField === 'gpay' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedField === 'gpay' ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* PhonePe Number */}
+                  {(shopInfo?.shop?.phonePeNumber || shopInfo?.shop?.ownerMobile || shopInfo?.shop?.mobile) && (
+                    <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] text-stone-500 uppercase font-bold block">PhonePe Number</span>
+                        <span className="font-mono font-bold text-stone-900">
+                          {shopInfo?.shop?.phonePeNumber || shopInfo?.shop?.ownerMobile || shopInfo?.shop?.mobile}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const num = shopInfo?.shop?.phonePeNumber || shopInfo?.shop?.ownerMobile || shopInfo?.shop?.mobile;
+                          navigator.clipboard.writeText(num);
+                          setCopiedField('phonepe');
+                          setTimeout(() => setCopiedField(''), 2000);
+                        }}
+                        className="btn-o py-1 px-2 text-[10px] flex items-center gap-1 shrink-0"
+                      >
+                        {copiedField === 'phonepe' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedField === 'phonepe' ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Footer Actions */}
+            <div className="pt-3 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentDoneMsg('Payment details sent! Please show payment screenshot to barber when visiting.');
+                  setTimeout(() => {
+                    setShowPaymentModal(false);
+                    setPaymentAppointment(null);
+                    setPaymentDoneMsg('');
+                  }, 2200);
+                }}
+                className="w-full sm:w-auto btn-brand text-xs py-2 px-4 flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>I Have Completed Payment</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPaymentAppointment(null);
+                  setPaymentDoneMsg('');
+                }}
+                className="w-full sm:w-auto btn-o text-xs py-2 px-4 text-center"
+              >
+                Pay Later at Salon
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
