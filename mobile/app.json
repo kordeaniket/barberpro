@@ -21,7 +21,8 @@
       "package": "com.barberpro.app",
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -31,6 +32,12 @@
           "photosPermission": "Allow BarberPro to access your photos to upload shop logos, QR codes, and profile avatars."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "49b9ba4a-1ae1-4e36-b8cf-7dc7bcab97f3"
+      }
+    },
+    "owner": "aniketkorde13"
   }
 }
