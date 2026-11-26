@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
 import { uiSlice } from '../../redux/store';
 import { useTranslation } from '../../i18n';
@@ -18,11 +18,13 @@ import PaymentModal from '../../components/PaymentModal';
 import { formatMin } from '../../utils/time';
 import { COLORS, SHADOWS } from '../../theme';
 
-export default function CustomerBookingsScreen() {
+export default function CustomerBookingsScreen({ navigation }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const refreshTrigger = useSelector((s) => s.ui.refreshTrigger);
 
   const [bookings, setBookings] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(15);
   const [shop, setShop] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [payAppt, setPayAppt] = useState(null);
@@ -33,14 +35,17 @@ export default function CustomerBookingsScreen() {
         api.get('/customer/bookings'),
         api.get('/customer/profile'),
       ]);
-      setBookings(bRes.data || []);
+      const sorted = [...(bRes.data || [])].sort(
+        (a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)
+      );
+      setBookings(sorted);
       setShop(pRes.data?.shop || null);
     } catch {}
   }, []);
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, refreshTrigger]);
 
   const cancelBooking = async (id) => {
     try {
@@ -57,9 +62,19 @@ export default function CustomerBookingsScreen() {
       <AppHeader title={t('customer.myBookings')} showNotifications />
 
       <FlatList
-        data={bookings}
+        data={bookings.slice(0, visibleCount)}
         keyExtractor={(item) => item._id}
         contentContainerStyle={{ padding: 14, paddingBottom: 30 }}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+        onEndReached={() => {
+          if (visibleCount < bookings.length) {
+            setVisibleCount((v) => v + 15);
+          }
+        }}
+        onEndReachedThreshold={0.4}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -99,6 +114,15 @@ export default function CustomerBookingsScreen() {
                     onPress={() => cancelBooking(item._id)}
                   >
                     <Text style={styles.cancelTxt}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                )}
+                {item.status === 'completed' && (
+                  <TouchableOpacity
+                    style={[styles.payBtn, { backgroundColor: COLORS.dark }]}
+                    onPress={() => navigation.navigate('Book')}
+                  >
+                    <Ionicons name="refresh" size={14} color={COLORS.amber} />
+                    <Text style={[styles.payTxt, { color: COLORS.amber }]}>{t('customer.bookNow')}</Text>
                   </TouchableOpacity>
                 )}
               </View>

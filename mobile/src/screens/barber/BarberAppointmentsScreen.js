@@ -9,9 +9,11 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
 import { uiSlice } from '../../redux/store';
 import { useTranslation } from '../../i18n';
@@ -23,8 +25,12 @@ import { COLORS, SHADOWS } from '../../theme';
 export default function BarberAppointmentsScreen() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const refreshTrigger = useSelector((s) => s.ui.refreshTrigger);
 
   const [appointments, setAppointments] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -41,17 +47,42 @@ export default function BarberAppointmentsScreen() {
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
 
-  const loadAppointments = useCallback(async () => {
-    try {
-      const params = new URLSearchParams({ all: 'true' });
-      const { data } = await api.get(`/barber/appointments?${params.toString()}`);
-      setAppointments(Array.isArray(data) ? data : data.appointments || []);
-    } catch {}
-  }, []);
+  const loadAppointments = useCallback(
+    async (pageNum = 1, append = false) => {
+      try {
+        const params = new URLSearchParams({
+          page: String(pageNum),
+          limit: '20',
+          sort: '-createdAt',
+          paginate: 'true',
+        });
+        if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (search.trim()) params.set('search', search.trim());
+        const { data } = await api.get(`/barber/appointments?${params.toString()}`, {
+          skipGlobalLoader: append,
+        });
+        const list = Array.isArray(data) ? data : data.appointments || [];
+        setPage(pageNum);
+        setTotalPages(data.totalPages || 1);
+        setAppointments((prev) => (append ? [...prev, ...list] : list));
+      } catch {}
+    },
+    [statusFilter, search]
+  );
 
   useEffect(() => {
-    loadAppointments();
-  }, [loadAppointments]);
+    const timer = setTimeout(() => {
+      loadAppointments(1, false);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [loadAppointments, refreshTrigger]);
+
+  const loadMore = async () => {
+    if (loadingMore || page >= totalPages) return;
+    setLoadingMore(true);
+    await loadAppointments(page + 1, true);
+    setLoadingMore(false);
+  };
 
   const openNewModal = async () => {
     setModalOpen(true);
@@ -186,15 +217,24 @@ export default function BarberAppointmentsScreen() {
       </View>
 
       <FlatList
-        data={filtered}
+        data={appointments}
         keyExtractor={(item) => item._id}
         contentContainerStyle={{ padding: 14, paddingBottom: 30 }}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          loadingMore ? <ActivityIndicator size="small" color={COLORS.amber} style={{ paddingVertical: 14 }} /> : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={async () => {
               setRefreshing(true);
-              await loadAppointments();
+              await loadAppointments(1, false);
               setRefreshing(false);
             }}
             tintColor={COLORS.amber}
@@ -208,7 +248,25 @@ export default function BarberAppointmentsScreen() {
                 <Text style={styles.custName}>{item.customerId?.name || 'Walk-In'}</Text>
                 <Text style={styles.custMob}>{item.customerId?.mobile || ''}</Text>
               </View>
-              <StatusBadge status={item.status} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {item.customerId?.mobile ? (
+                  <>
+                    <TouchableOpacity
+                      style={styles.quickIconBtn}
+                      onPress={() => Linking.openURL(`tel:${item.customerId.mobile}`)}
+                    >
+                      <Ionicons name="call-outline" size={15} color={COLORS.dark} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.quickIconBtn, { backgroundColor: COLORS.emeraldBg }]}
+                      onPress={() => Linking.openURL(`https://wa.me/91${item.customerId.mobile.replace(/\D/g, '').slice(-10)}`)}
+                    >
+                      <Ionicons name="logo-whatsapp" size={15} color={COLORS.emerald} />
+                    </TouchableOpacity>
+                  </>
+                ) : null}
+                <StatusBadge status={item.status} />
+              </View>
             </View>
 
             <Text style={styles.serviceTxt}>{item.serviceName}</Text>
@@ -445,6 +503,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  quickIconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   custName: { fontSize: 15, fontWeight: '800', color: COLORS.text },
   custMob: { fontSize: 12, color: COLORS.textMuted },
   serviceTxt: { fontSize: 13, fontWeight: '600', color: COLORS.amberDark, marginTop: 6 },

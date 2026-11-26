@@ -23,6 +23,7 @@ export default function AdminRequestsScreen() {
   const dispatch = useDispatch();
 
   const [requests, setRequests] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(15);
   const [filter, setFilter] = useState('pending');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -84,9 +85,17 @@ export default function AdminRequestsScreen() {
       </View>
 
       <FlatList
-        data={requests}
+        data={requests.slice(0, visibleCount)}
         keyExtractor={(item) => item._id}
         contentContainerStyle={{ padding: 14, paddingBottom: 30 }}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+        onEndReached={() => {
+          if (visibleCount < requests.length) setVisibleCount((v) => v + 15);
+        }}
+        onEndReachedThreshold={0.4}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

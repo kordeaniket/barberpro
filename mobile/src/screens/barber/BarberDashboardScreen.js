@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
 import { notificationsSlice } from '../../redux/store';
 import { useTranslation } from '../../i18n';
@@ -20,6 +20,7 @@ import { COLORS, SHADOWS } from '../../theme';
 export default function BarberDashboardScreen({ navigation }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const refreshTrigger = useSelector((s) => s.ui.refreshTrigger);
   const [period, setPeriod] = useState('daily');
   const [data, setData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,7 +38,7 @@ export default function BarberDashboardScreen({ navigation }) {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, refreshTrigger]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -69,6 +70,21 @@ export default function BarberDashboardScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Pending Requests Live Alert */}
+        {(s.pendingAppointments || 0) > 0 && (
+          <TouchableOpacity
+            style={[styles.pendingAlert, SHADOWS.sm]}
+            onPress={() => navigation.navigate('Appointments')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.pendingDot} />
+            <Text style={styles.pendingAlertTxt}>
+              {s.pendingAppointments} {t('barber.pending')} {t('barber.bookings')}
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.amberDark} />
+          </TouchableOpacity>
+        )}
 
         {/* Today's Snapshot Banner */}
         <View style={[styles.snapCard, SHADOWS.md]}>
@@ -186,6 +202,19 @@ const styles = StyleSheet.create({
   periodActive: { backgroundColor: COLORS.dark, borderColor: COLORS.dark },
   periodText: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted },
   periodTextActive: { color: COLORS.amber },
+  pendingAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.amberBg,
+    borderWidth: 1,
+    borderColor: COLORS.amber,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+  },
+  pendingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.amberDark },
+  pendingAlertTxt: { flex: 1, fontSize: 13, fontWeight: '800', color: COLORS.dark },
   snapCard: {
     backgroundColor: COLORS.dark,
     borderRadius: 18,

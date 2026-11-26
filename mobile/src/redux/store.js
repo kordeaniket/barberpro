@@ -73,11 +73,20 @@ export const uiSlice = createSlice({
 
 export const notificationsSlice = createSlice({
   name: 'notifications',
-  initialState: { items: [], unreadCount: 0 },
+  initialState: { items: [], unreadCount: 0, latestPopup: null },
   reducers: {
     setNotifications: (s, a) => {
+      const prevIds = new Set(s.items.map((n) => n.id));
       const readMap = new Map(s.items.map((n) => [n.id, n.read]));
-      s.items = (a.payload || []).map((item) => ({
+      const incoming = a.payload || [];
+      // Detect newly arrived notification on subsequent polls
+      if (s.items.length > 0) {
+        const brandNew = incoming.find((item) => !prevIds.has(item.id));
+        if (brandNew) {
+          s.latestPopup = brandNew;
+        }
+      }
+      s.items = incoming.map((item) => ({
         ...item,
         read: readMap.has(item.id) ? readMap.get(item.id) : Boolean(item.read),
       }));
@@ -85,9 +94,14 @@ export const notificationsSlice = createSlice({
     },
     addNotification: (s, a) => {
       if (s.items.some((n) => n.id === a.payload.id)) return;
-      s.items.unshift({ ...a.payload, read: false });
+      const item = { ...a.payload, read: false };
+      s.items.unshift(item);
       if (s.items.length > 50) s.items.pop();
       s.unreadCount = s.items.filter((n) => !n.read).length;
+      s.latestPopup = item;
+    },
+    dismissPopup: (s) => {
+      s.latestPopup = null;
     },
     markAllAsRead: (s) => {
       s.items.forEach((n) => {
@@ -98,6 +112,7 @@ export const notificationsSlice = createSlice({
     clearAll: (s) => {
       s.items = [];
       s.unreadCount = 0;
+      s.latestPopup = null;
     },
   },
 });

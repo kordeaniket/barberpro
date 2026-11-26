@@ -24,6 +24,7 @@ export default function AdminShopsScreen() {
   const dispatch = useDispatch();
 
   const [shops, setShops] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(15);
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -123,9 +124,17 @@ export default function AdminShopsScreen() {
       </View>
 
       <FlatList
-        data={filtered}
+        data={filtered.slice(0, visibleCount)}
         keyExtractor={(item) => item._id}
         contentContainerStyle={{ padding: 14, paddingBottom: 30 }}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+        onEndReached={() => {
+          if (visibleCount < filtered.length) setVisibleCount((v) => v + 15);
+        }}
+        onEndReachedThreshold={0.4}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

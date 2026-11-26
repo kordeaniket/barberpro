@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -24,8 +25,10 @@ export default function CustomerHomeScreen({ navigation }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector((s) => s.auth.user);
+  const refreshTrigger = useSelector((s) => s.ui.refreshTrigger);
 
   const [shop, setShop] = useState(null);
+  const [services, setServices] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [payAppt, setPayAppt] = useState(null);
@@ -40,10 +43,17 @@ export default function CustomerHomeScreen({ navigation }) {
         api.get('/customer/notifications', { skipGlobalLoader: true }),
         api.get('/customer/shops', { skipGlobalLoader: true }),
       ]);
-      setShop(profRes.data?.shop || null);
+      const profShop = profRes.data?.shop || null;
+      setShop(profShop);
       setBookings(bookRes.data || []);
       dispatch(notificationsSlice.actions.setNotifications(notifRes.data || []));
       setActiveShops(shopsRes.data?.activeShops || []);
+      if (profShop?.shopCode) {
+        api
+          .get(`/customer/public/shop/${profShop.shopCode}`, { skipGlobalLoader: true })
+          .then((r) => setServices(r.data?.services || []))
+          .catch(() => {});
+      }
     } catch { }
   }, [dispatch]);
 
@@ -60,7 +70,7 @@ export default function CustomerHomeScreen({ navigation }) {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, refreshTrigger]);
 
   const cancelBooking = async (id) => {
     try {
@@ -124,7 +134,45 @@ export default function CustomerHomeScreen({ navigation }) {
             <Ionicons name="calendar-outline" size={18} color={COLORS.dark} />
             <Text style={styles.bookCtaText}>{t('customer.bookNow')}</Text>
           </TouchableOpacity>
+
+          {shop?.ownerMobile ? (
+            <View style={styles.contactRow}>
+              <TouchableOpacity
+                style={styles.contactBtn}
+                onPress={() => Linking.openURL(`tel:${shop.ownerMobile}`)}
+              >
+                <Ionicons name="call-outline" size={15} color={COLORS.amberLight} />
+                <Text style={styles.contactTxt}>{shop.ownerMobile}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.contactBtn}
+                onPress={() => Linking.openURL(`https://wa.me/91${String(shop.ownerMobile).replace(/\D/g, '').slice(-10)}`)}
+              >
+                <Ionicons name="logo-whatsapp" size={15} color={COLORS.emerald} />
+                <Text style={styles.contactTxt}>WhatsApp</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
+
+        {/* Popular Services Preview */}
+        {services.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.sectionTitle}>{t('barber.servicesTab')}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {services.slice(0, 8).map((sv) => (
+                <TouchableOpacity
+                  key={sv._id}
+                  style={[styles.svcPill, SHADOWS.sm]}
+                  onPress={() => navigation.navigate('Book')}
+                >
+                  <Text style={styles.svcPillName}>{sv.name}</Text>
+                  <Text style={styles.svcPillMeta}>₹{sv.price} • {sv.duration}m</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Today's Appointment */}
         <Text style={styles.sectionTitle}>{t('customer.todaysAppt')}</Text>
@@ -222,6 +270,28 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   bookCtaText: { fontSize: 14, fontWeight: '800', color: COLORS.dark },
+  contactRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  contactBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  contactTxt: { color: COLORS.white, fontSize: 12, fontWeight: '700' },
+  svcPill: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  svcPillName: { fontSize: 13, fontWeight: '800', color: COLORS.text },
+  svcPillMeta: { fontSize: 11, fontWeight: '700', color: COLORS.amberDark, marginTop: 2 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 10 },
   apptCard: {
     backgroundColor: COLORS.white,

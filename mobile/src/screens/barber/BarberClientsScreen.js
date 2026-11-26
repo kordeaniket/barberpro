@@ -9,6 +9,8 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
@@ -24,6 +26,9 @@ export default function BarberClientsScreen() {
   const dispatch = useDispatch();
 
   const [clients, setClients] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -38,16 +43,34 @@ export default function BarberClientsScreen() {
   // Ledger Modal
   const [ledger, setLedger] = useState(null);
 
-  const load = useCallback(async () => {
-    try {
-      const { data } = await api.get('/barber/customers');
-      setClients(data || []);
-    } catch {}
-  }, []);
+  const load = useCallback(
+    async (pageNum = 1, append = false) => {
+      try {
+        const params = new URLSearchParams({ page: String(pageNum), limit: '20' });
+        if (search.trim()) params.set('search', search.trim());
+        const { data } = await api.get(`/barber/customers-paginated?${params.toString()}`, {
+          skipGlobalLoader: append,
+        });
+        const list = data.customers || [];
+        setPage(pageNum);
+        setTotalPages(data.totalPages || 1);
+        setClients((prev) => (append ? [...prev, ...list] : list));
+      } catch {}
+    },
+    [search]
+  );
 
   useEffect(() => {
-    load();
+    const timer = setTimeout(() => load(1, false), 200);
+    return () => clearTimeout(timer);
   }, [load]);
+
+  const loadMore = async () => {
+    if (loadingMore || page >= totalPages) return;
+    setLoadingMore(true);
+    await load(page + 1, true);
+    setLoadingMore(false);
+  };
 
   const openAdd = () => {
     setEditingId(null);
@@ -122,15 +145,24 @@ export default function BarberClientsScreen() {
       </View>
 
       <FlatList
-        data={filtered}
+        data={clients}
         keyExtractor={(item) => item._id}
         contentContainerStyle={{ padding: 14, paddingBottom: 30 }}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          loadingMore ? <ActivityIndicator size="small" color={COLORS.amber} style={{ paddingVertical: 14 }} /> : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={async () => {
               setRefreshing(true);
-              await load();
+              await load(1, false);
               setRefreshing(false);
             }}
             tintColor={COLORS.amber}
@@ -151,6 +183,14 @@ export default function BarberClientsScreen() {
               <Text style={styles.sub}>{item.mobile}</Text>
               {item.notes ? <Text style={styles.notes}>{item.notes}</Text> : null}
             </View>
+            {item.mobile ? (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(`tel:${item.mobile}`)}
+                style={styles.editBtn}
+              >
+                <Ionicons name="call-outline" size={19} color={COLORS.emerald} />
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity onPress={() => openEdit(item)} style={styles.editBtn}>
               <Ionicons name="create-outline" size={20} color={COLORS.amberDark} />
             </TouchableOpacity>
