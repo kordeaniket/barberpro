@@ -1,7 +1,7 @@
 const r = require('express').Router();
 const { Shop, Service, Customer, Appointment } = require('../models');
 const { auth } = require('../middleware/auth');
-const { wrap, need } = require('../utils/helpers');
+const { wrap, need, formatTime12 } = require('../utils/helpers');
 const { genSlots, hasConflict } = require('../utils/slots');
 const { emitShop } = require('../sockets');
 const shopByCode = async (code) => Shop.findOne({ shopCode: code, status: 'active' });
@@ -177,9 +177,7 @@ r.post('/bookings', wrap(async (req, res) => {
     source: 'online'
   });
 
-  const startH = Math.floor(start / 60);
-  const startM = start % 60;
-  const timeFormatted = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+  const timeFormatted = formatTime12(start);
 
   emitShop(req.shopId, 'booking:new', {
     id: a._id.toString(),
@@ -210,9 +208,7 @@ r.patch('/bookings/:id/cancel', wrap(async (req, res) => {
   if (!a) return res.status(404).json({ message: 'Not found' });
   a.status = 'cancelled'; await a.save();
 
-  const startH = Math.floor(a.startMin / 60);
-  const startM = a.startMin % 60;
-  const timeFormatted = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+  const timeFormatted = formatTime12(a.startMin);
 
   emitShop(req.shopId, 'booking:cancelled', {
     id: a._id.toString(),
@@ -247,9 +243,7 @@ r.get('/notifications', wrap(async (req, res) => {
     if (a.date === todayStr && ['pending', 'confirmed'].includes(a.status)) {
       const diff = a.startMin - nowMin;
       if (diff > 0 && diff <= 60) {
-        const sH = Math.floor(a.startMin / 60);
-        const sM = a.startMin % 60;
-        const timeStr = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`;
+        const timeStr = formatTime12(a.startMin);
         notifs.push({
           id: `reminder-1h-${a._id}`,
           appointmentId: a._id.toString(),
@@ -269,9 +263,7 @@ r.get('/notifications', wrap(async (req, res) => {
 
   // 2. Appointment status notifications
   appointments.forEach((a) => {
-    const sH = Math.floor(a.startMin / 60);
-    const sM = a.startMin % 60;
-    const timeStr = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`;
+    const timeStr = formatTime12(a.startMin);
     let title = 'Booking Pending Confirmation';
     let type = 'booking';
     if (a.status === 'confirmed') {

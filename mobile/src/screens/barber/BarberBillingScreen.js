@@ -195,94 +195,29 @@ export default function BarberBillingScreen() {
 
   return (
     <View style={styles.container}>
-      <AppHeader showNotifications />
-
-      <View style={styles.tabsRow}>
-        <TouchableOpacity
-          onPress={() => setTab('invoices')}
-          style={[styles.tabBtn, tab === 'invoices' && styles.tabActive]}
-        >
-          <Text style={[styles.tabTxt, tab === 'invoices' && styles.tabTxtActive]}>
-            {t('barber.invoicesTab')} ({invoices.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setTab('services')}
-          style={[styles.tabBtn, tab === 'services' && styles.tabActive]}
-        >
-          <Text style={[styles.tabTxt, tab === 'services' && styles.tabTxtActive]}>
-            {t('barber.servicesTab')} ({services.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <AppHeader title={t('barber.invoicesTab')} showNotifications />
 
       <View style={styles.actionBar}>
-        {tab === 'services' ? (
-          <TouchableOpacity style={styles.primaryBarBtn} onPress={openAddSvc}>
-            <Ionicons name="add-circle-outline" size={18} color={COLORS.dark} />
-            <Text style={styles.primaryBarTxt}>{t('barber.addService')}</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.primaryBarBtn}
-            onPress={() => {
-              setBillMode(billableAppts.length > 0 ? 'appointment' : 'direct');
-              setSelectedApptId(billableAppts[0]?._id || '');
-              setSelectedCustomerId(customers[0]?._id || '');
-              setSelectedServiceIds([]);
-              setDiscount('0');
-              setTaxPct('0');
-              setMethod('cash');
-              setBillModal(true);
-            }}
-          >
-            <Ionicons name="receipt-outline" size={18} color={COLORS.dark} />
-            <Text style={styles.primaryBarTxt}>{t('barber.generateBill')}</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.primaryBarBtn}
+          onPress={() => {
+            setBillMode(billableAppts.length > 0 ? 'appointment' : 'direct');
+            setSelectedApptId(billableAppts[0]?._id || '');
+            setSelectedCustomerId(customers[0]?._id || '');
+            setSelectedServiceIds([]);
+            setDiscount('0');
+            setTaxPct('0');
+            setMethod('cash');
+            setBillModal(true);
+          }}
+        >
+          <Ionicons name="receipt-outline" size={18} color={COLORS.dark} />
+          <Text style={styles.primaryBarTxt}>{t('barber.generateBill')}</Text>
+        </TouchableOpacity>
       </View>
 
-      {tab === 'services' ? (
-        <FlatList
-          data={services}
-          keyExtractor={(item) => item._id}
-          initialNumToRender={12}
-          maxToRenderPerBatch={12}
-          removeClippedSubviews
-          contentContainerStyle={{ padding: 14, paddingBottom: 30 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={async () => {
-                setRefreshing(true);
-                await load();
-                setRefreshing(false);
-              }}
-              tintColor={COLORS.amber}
-            />
-          }
-          ListEmptyComponent={<Text style={styles.empty}>{t('common.noData')}</Text>}
-          renderItem={({ item }) => (
-            <View style={[styles.card, SHADOWS.sm]}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.title}>{item.name}</Text>
-                <Text style={styles.sub}>
-                  ₹{item.price} • {item.duration} {t('common.mins')}
-                </Text>
-                {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
-              </View>
-              <TouchableOpacity onPress={() => openEditSvc(item)} style={{ padding: 8 }}>
-                <Ionicons name="create-outline" size={20} color={COLORS.amberDark} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => deleteService(item._id)} style={{ padding: 8 }}>
-                <Ionicons name="trash-outline" size={20} color={COLORS.red} />
-              </TouchableOpacity>
-            </View>
-          )}
-        />
-      ) : (
-        <FlatList
-          data={invoices}
+      <FlatList
+        data={invoices}
           keyExtractor={(item) => item._id}
           initialNumToRender={12}
           maxToRenderPerBatch={12}
@@ -322,7 +257,6 @@ export default function BarberBillingScreen() {
             </TouchableOpacity>
           )}
         />
-      )}
 
       {/* Service Modal */}
       <Modal visible={svcModal} transparent animationType="slide" onRequestClose={() => setSvcModal(false)}>
@@ -492,7 +426,7 @@ export default function BarberBillingScreen() {
             </View>
             <Text style={styles.title}>{receipt?.customerId?.name || 'Walk-In'}</Text>
             <Text style={styles.desc}>
-              {receipt?.customerId?.mobile || ''} • {receipt?.createdAt ? new Date(receipt.createdAt).toLocaleString() : ''}
+              {receipt?.customerId?.mobile || ''} • {receipt?.createdAt ? new Date(receipt.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : ''}
             </Text>
 
             <View style={styles.receiptItems}>

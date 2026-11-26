@@ -1,7 +1,7 @@
 const r = require('express').Router();
 const { Shop, User, Customer, Service, Appointment, Invoice } = require('../models');
 const { auth } = require('../middleware/auth');
-const { wrap, pick, need, today } = require('../utils/helpers');
+const { wrap, pick, need, today, formatTime12 } = require('../utils/helpers');
 const { hasConflict, genSlots } = require('../utils/slots');
 const { emitUser } = require('../sockets');
 const { sendWhatsApp } = require('../services/whatsapp');
@@ -412,9 +412,7 @@ r.patch('/appointments/:id', wrap(async (req, res) => {
   if (!a) return res.status(404).json({ message: 'Not found' });
   a.status = req.body.status; await a.save();
   if (a.customerId && a.customerId.userId) {
-    const sH = Math.floor(a.startMin / 60);
-    const sM = a.startMin % 60;
-    const timeFormatted = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`;
+    const timeFormatted = formatTime12(a.startMin);
     let notifTitle = `Booking ${a.status.replace('_', ' ').toUpperCase()}`;
     if (a.status === 'confirmed') notifTitle = '🎉 Booking Confirmed!';
     else if (a.status === 'in_progress') notifTitle = '✂️ Service In Progress';
@@ -516,9 +514,7 @@ r.get('/notifications', wrap(async (req, res) => {
     .limit(25);
 
   const notifs = recent.map((a) => {
-    const startH = Math.floor(a.startMin / 60);
-    const startM = a.startMin % 60;
-    const timeStr = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+    const timeStr = formatTime12(a.startMin);
     const custName = a.customerId?.name || 'Walk-In';
 
     let title = 'New Online Booking';

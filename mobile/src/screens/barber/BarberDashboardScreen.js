@@ -15,6 +15,7 @@ import { useTranslation } from '../../i18n';
 import AppHeader from '../../components/AppHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
+import { formatMin } from '../../utils/time';
 import { COLORS, SHADOWS } from '../../theme';
 
 export default function BarberDashboardScreen({ navigation }) {
@@ -171,7 +172,7 @@ export default function BarberDashboardScreen({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.recentName}>{a.customerId?.name || a.customer || 'Walk-In'}</Text>
                 <Text style={styles.recentSub}>
-                  {a.serviceName} • {a.date}
+                  {a.serviceName} • {a.date}{a.startMin !== undefined ? ` • ${formatMin(a.startMin)}` : ''}
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 4 }}>

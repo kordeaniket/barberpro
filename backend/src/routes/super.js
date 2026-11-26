@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const { User, Shop, Plan, Customer, Appointment, Invoice, Service, ShopRequest } = require('../models');
 const { auth } = require('../middleware/auth');
-const { wrap, pick, need, rand } = require('../utils/helpers');
+const { wrap, pick, need, rand, formatTime12 } = require('../utils/helpers');
 const { sendWhatsApp } = require('../services/whatsapp');
 
 r.use(auth('superadmin'));
@@ -140,7 +140,7 @@ r.get('/dashboard', wrap(async (req, res) => {
         service: b.serviceName,
         price: b.price,
         date: b.date,
-        time: `${Math.floor(b.startMin / 60)}:${String(b.startMin % 60).padStart(2, '0')}`,
+        time: formatTime12(b.startMin),
         status: b.status
       })),
       allShops

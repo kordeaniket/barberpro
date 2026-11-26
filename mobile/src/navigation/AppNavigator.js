@@ -12,6 +12,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import BarberDashboardScreen from '../screens/barber/BarberDashboardScreen';
 import BarberAppointmentsScreen from '../screens/barber/BarberAppointmentsScreen';
 import BarberClientsScreen from '../screens/barber/BarberClientsScreen';
+import BarberServicesScreen from '../screens/barber/BarberServicesScreen';
 import BarberBillingScreen from '../screens/barber/BarberBillingScreen';
 import BarberProfileScreen from '../screens/barber/BarberProfileScreen';
 
@@ -41,7 +42,8 @@ const tabScreenOptions = (icons) => ({ route }) => ({
     paddingBottom: 8,
     paddingTop: 6,
   },
-  tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+  tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
+  tabBarItemStyle: { paddingHorizontal: 0 },
   tabBarIcon: ({ focused, color, size }) => {
     const pair = icons[route.name] || ['ellipse', 'ellipse-outline'];
     return <Ionicons name={focused ? pair[0] : pair[1]} size={size} color={color} />;
@@ -56,6 +58,7 @@ function BarberTabs() {
         Dashboard: ['grid', 'grid-outline'],
         Appointments: ['calendar', 'calendar-outline'],
         Clients: ['people', 'people-outline'],
+        Services: ['cut', 'cut-outline'],
         Billing: ['receipt', 'receipt-outline'],
         Profile: ['storefront', 'storefront-outline'],
       })}
@@ -63,6 +66,7 @@ function BarberTabs() {
       <Tab.Screen name="Dashboard" component={BarberDashboardScreen} options={{ title: t('nav.dashboard') }} />
       <Tab.Screen name="Appointments" component={BarberAppointmentsScreen} options={{ title: t('nav.appointments') }} />
       <Tab.Screen name="Clients" component={BarberClientsScreen} options={{ title: t('nav.clients') }} />
+      <Tab.Screen name="Services" component={BarberServicesScreen} options={{ title: t('barber.servicesTab') }} />
       <Tab.Screen name="Billing" component={BarberBillingScreen} options={{ title: t('nav.billing') }} />
       <Tab.Screen name="Profile" component={BarberProfileScreen} options={{ title: t('nav.profile') }} />
     </Tab.Navigator>
