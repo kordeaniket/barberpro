@@ -5,6 +5,12 @@ const { wrap, need } = require('../utils/helpers');
 const { genSlots, hasConflict } = require('../utils/slots');
 const { emitShop } = require('../sockets');
 const shopByCode = async (code) => Shop.findOne({ shopCode: code, status: 'active' });
+r.get('/public/shops', wrap(async (req, res) => {
+  const shops = await Shop.find({ status: 'active' })
+    .select('_id name city address shopCode logoUrl')
+    .sort('name');
+  res.json(shops);
+}));
 r.get('/public/shop/:code', wrap(async (req, res) => {
   const s = await shopByCode(req.params.code); if (!s) return res.status(404).json({ message: 'Shop not found' });
   res.json({
@@ -44,6 +50,49 @@ r.get('/public/slots', wrap(async (req, res) => {
   res.json(genSlots({ openMin: s.openMin, closeMin: s.closeMin, duration, booked }));
 }));
 r.use(auth('customer'));
+
+r.get('/shops', wrap(async (req, res) => {
+  const [activeShops, custRecords] = await Promise.all([
+    Shop.find({ status: 'active' }).select('_id name city address shopCode logoUrl').sort('name'),
+    Customer.find({ userId: req.user._id, deleted: false }).populate('shopId', '_id name city address shopCode logoUrl status')
+  ]);
+  const joinedShops = custRecords
+    .map((c) => c.shopId)
+    .filter((s) => s && s.status === 'active');
+  res.json({
+    currentShopId: req.shopId,
+    joinedShops,
+    activeShops
+  });
+}));
+
+r.post('/switch-shop', wrap(async (req, res) => {
+  need(req.body, ['shopId']);
+  const shop = await Shop.findOne({ _id: req.body.shopId, status: 'active' });
+  if (!shop) return res.status(404).json({ message: 'Active salon not found' });
+
+  await Customer.findOneAndUpdate(
+    { shopId: shop._id, mobile: req.user.mobile },
+    { shopId: shop._id, mobile: req.user.mobile, name: req.user.name, email: req.user.email, userId: req.user._id, deleted: false },
+    { upsert: true }
+  );
+
+  req.user.shopId = shop._id;
+  await req.user.save();
+
+  res.json({
+    message: `Switched to ${shop.name}`,
+    shopId: shop._id,
+    shop: {
+      id: shop._id,
+      _id: shop._id,
+      name: shop.name,
+      logoUrl: shop.logoUrl,
+      shopCode: shop.shopCode,
+      city: shop.city
+    }
+  });
+}));
 
 r.get('/profile', wrap(async (req, res) => {
   const cust = await Customer.findOne({ shopId: req.shopId, userId: req.user._id });

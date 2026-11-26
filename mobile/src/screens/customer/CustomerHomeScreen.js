@@ -11,11 +11,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
-import { notificationsSlice, uiSlice } from '../../redux/store';
+import { notificationsSlice, uiSlice, authSlice } from '../../redux/store';
 import { useTranslation } from '../../i18n';
 import AppHeader from '../../components/AppHeader';
 import StatusBadge from '../../components/StatusBadge';
 import PaymentModal from '../../components/PaymentModal';
+import SalonPickerModal from '../../components/SalonPickerModal';
 import { formatMin, todayStr } from '../../utils/time';
 import { COLORS, SHADOWS } from '../../theme';
 
@@ -28,19 +29,34 @@ export default function CustomerHomeScreen({ navigation }) {
   const [bookings, setBookings] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [payAppt, setPayAppt] = useState(null);
+  const [activeShops, setActiveShops] = useState([]);
+  const [salonModalOpen, setSalonModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [profRes, bookRes, notifRes] = await Promise.all([
+      const [profRes, bookRes, notifRes, shopsRes] = await Promise.all([
         api.get('/customer/profile'),
         api.get('/customer/bookings'),
         api.get('/customer/notifications', { skipGlobalLoader: true }),
+        api.get('/customer/shops', { skipGlobalLoader: true }),
       ]);
       setShop(profRes.data?.shop || null);
       setBookings(bookRes.data || []);
       dispatch(notificationsSlice.actions.setNotifications(notifRes.data || []));
+      setActiveShops(shopsRes.data?.activeShops || []);
     } catch {}
   }, [dispatch]);
+
+  const handleSwitchSalon = async (chosen) => {
+    try {
+      const { data } = await api.post('/customer/switch-shop', { shopId: chosen._id });
+      dispatch(authSlice.actions.updateUser({ shopId: data.shopId, shop: data.shop }));
+      dispatch(uiSlice.actions.setMsg({ type: 'ok', text: data.message }));
+      await load();
+    } catch (e) {
+      dispatch(uiSlice.actions.setMsg({ type: 'error', text: e?.response?.data?.message || e.message }));
+    }
+  };
 
   useEffect(() => {
     load();
@@ -95,6 +111,13 @@ export default function CustomerHomeScreen({ navigation }) {
               <Text style={styles.shopName}>{shop?.name || 'BarberPro Salon'}</Text>
               {shop?.city ? <Text style={styles.shopCity}>📍 {shop.city}</Text> : null}
             </View>
+            <TouchableOpacity
+              style={styles.switchBtn}
+              onPress={() => setSalonModalOpen(true)}
+            >
+              <Ionicons name="swap-horizontal" size={14} color={COLORS.dark} />
+              <Text style={styles.switchBtnTxt}>{t('auth.switchSalon')}</Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.bookCta} onPress={() => navigation.navigate('Book')}>
@@ -144,6 +167,15 @@ export default function CustomerHomeScreen({ navigation }) {
         appointment={payAppt}
         shop={shop}
       />
+
+      <SalonPickerModal
+        visible={salonModalOpen}
+        onClose={() => setSalonModalOpen(false)}
+        shops={activeShops}
+        selectedShopId={user?.shopId}
+        onSelect={handleSwitchSalon}
+        title={t('auth.switchSalon')}
+      />
     </View>
   );
 }
@@ -170,6 +202,16 @@ const styles = StyleSheet.create({
   helloTxt: { color: COLORS.amberLight, fontSize: 12, fontWeight: '600' },
   shopName: { color: COLORS.white, fontSize: 19, fontWeight: '800', marginTop: 2 },
   shopCity: { color: COLORS.textLight, fontSize: 12, marginTop: 2 },
+  switchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.amberLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  switchBtnTxt: { fontSize: 11, fontWeight: '800', color: COLORS.dark },
   bookCta: {
     flexDirection: 'row',
     alignItems: 'center',

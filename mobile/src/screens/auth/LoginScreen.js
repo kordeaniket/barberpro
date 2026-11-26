@@ -17,6 +17,7 @@ import api, { saveSession } from '../../services/api';
 import { authSlice, uiSlice } from '../../redux/store';
 import { useTranslation } from '../../i18n';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import SalonPickerModal from '../../components/SalonPickerModal';
 import { COLORS, SHADOWS } from '../../theme';
 
 export default function LoginScreen() {
@@ -37,12 +38,22 @@ export default function LoginScreen() {
   // Registration fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [shopCode, setShopCode] = useState('');
+  const [activeShops, setActiveShops] = useState([]);
+  const [selectedShop, setSelectedShop] = useState(null);
+  const [salonModalOpen, setSalonModalOpen] = useState(false);
   const [shopName, setShopName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [regBusy, setRegBusy] = useState(false);
+
+  useEffect(() => {
+    if (mode !== 'customer_reg') return;
+    api
+      .get('/customer/public/shops', { skipGlobalLoader: true })
+      .then((res) => setActiveShops(res.data || []))
+      .catch(() => setActiveShops([]));
+  }, [mode]);
 
   useEffect(() => {
     const clean = mobile.replace(/\D/g, '');
@@ -83,7 +94,7 @@ export default function LoginScreen() {
     if (clean.length !== 10) {
       return dispatch(uiSlice.actions.setMsg({ type: 'error', text: t('auth.invalidMobile') }));
     }
-    if (!name.trim() || !password || !shopCode.trim()) {
+    if (!name.trim() || !password || !selectedShop?._id) {
       return dispatch(uiSlice.actions.setMsg({ type: 'error', text: t('auth.fillRequired') }));
     }
     setRegBusy(true);
@@ -93,7 +104,7 @@ export default function LoginScreen() {
         mobile: clean,
         email: email.trim() || undefined,
         password,
-        shopCode: shopCode.trim().toUpperCase(),
+        shopId: selectedShop._id,
       });
       await saveSession(data);
       dispatch(authSlice.actions.loginSuccess(data.user));
@@ -192,15 +203,28 @@ export default function LoginScreen() {
                   onChangeText={setName}
                 />
 
-                <Text style={styles.label}>{t('auth.shopCode')} *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={t('auth.shopCodePlaceholder')}
-                  placeholderTextColor={COLORS.textLight}
-                  autoCapitalize="characters"
-                  value={shopCode}
-                  onChangeText={setShopCode}
-                />
+                <Text style={styles.label}>{t('auth.selectSalon')} *</Text>
+                <TouchableOpacity
+                  style={styles.dropdownBtn}
+                  onPress={() => setSalonModalOpen(true)}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <Ionicons name="storefront-outline" size={18} color={COLORS.textMuted} />
+                    <Text
+                      style={[
+                        styles.dropdownText,
+                        !selectedShop && { color: COLORS.textLight },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {selectedShop
+                        ? `${selectedShop.name}${selectedShop.city ? ` (${selectedShop.city})` : ''}`
+                        : t('auth.chooseSalonPlaceholder')}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} />
+                </TouchableOpacity>
               </>
             )}
 
@@ -361,6 +385,15 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SalonPickerModal
+        visible={salonModalOpen}
+        onClose={() => setSalonModalOpen(false)}
+        shops={activeShops}
+        selectedShopId={selectedShop?._id}
+        onSelect={setSelectedShop}
+        title={t('auth.selectSalon')}
+      />
     </SafeAreaView>
   );
 }
@@ -413,6 +446,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   inputFlex: { flex: 1, paddingVertical: 11, fontSize: 14, color: COLORS.text },
+  dropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    backgroundColor: COLORS.bg,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  dropdownText: { fontSize: 14, color: COLORS.text, flex: 1 },
   detectBanner: {
     flexDirection: 'row',
     alignItems: 'center',

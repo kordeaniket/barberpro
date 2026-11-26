@@ -9,7 +9,16 @@ const issue = async (u) => {
   let shop = null;
   if (u.shopId) {
     const s = await Shop.findById(u.shopId).select('name logoUrl shopCode city');
-    if (s) shop = { id: s._id, name: s.name, logoUrl: s.logoUrl, shopCode: s.shopCode, city: s.city };
+    if (s) shop = { id: s._id, _id: s._id, name: s.name, logoUrl: s.logoUrl, shopCode: s.shopCode, city: s.city };
+  }
+  let joinedShops = [];
+  if (u.role === 'customer') {
+    const custRecords = await Customer.find({ userId: u._id, deleted: false })
+      .populate('shopId', 'name logoUrl shopCode city status');
+    joinedShops = custRecords
+      .map((c) => c.shopId)
+      .filter((s) => s && s.status === 'active')
+      .map((s) => ({ id: s._id, _id: s._id, name: s.name, logoUrl: s.logoUrl, shopCode: s.shopCode, city: s.city }));
   }
   return {
     token: sign(u),
@@ -21,7 +30,8 @@ const issue = async (u) => {
       role: u.role,
       shopId: u.shopId,
       mustChangePassword: false,
-      shop
+      shop,
+      joinedShops
     }
   };
 };
@@ -104,12 +114,56 @@ r.post('/change-password', auth(), wrap(async (req, res) => {
   res.json({ message: 'Password changed' });
 }));
 r.post('/register-customer', wrap(async (req, res) => {
-  need(req.body, ['name', 'mobile', 'password', 'shopCode']);
-  const shop = await Shop.findOne({ shopCode: req.body.shopCode, status: 'active' });
-  if (!shop) return res.status(404).json({ message: 'Shop not found' });
-  if (await User.findOne({ mobile: req.body.mobile })) return res.status(409).json({ message: 'Mobile already registered' });
-  const u = await User.create({ name: req.body.name, mobile: req.body.mobile, email: req.body.email, role: 'customer', shopId: shop._id, passwordHash: await bcrypt.hash(req.body.password, 10) });
-  await Customer.findOneAndUpdate({ shopId: shop._id, mobile: u.mobile }, { shopId: shop._id, mobile: u.mobile, name: u.name, email: u.email, userId: u._id }, { upsert: true });
+  need(req.body, ['name', 'mobile', 'password']);
+  const mobile = String(req.body.mobile || '').replace(/\D/g, '').slice(-10);
+  if (mobile.length !== 10) return res.status(400).json({ message: 'Please enter a valid 10-digit mobile number' });
+
+  let shop = null;
+  if (req.body.shopId) {
+    shop = await Shop.findOne({ _id: req.body.shopId, status: 'active' });
+  } else if (req.body.shopCode) {
+    shop = await Shop.findOne({ shopCode: req.body.shopCode, status: 'active' });
+  } else {
+    return res.status(400).json({ message: 'Please select an active salon' });
+  }
+  if (!shop) return res.status(404).json({ message: 'Active salon not found' });
+
+  let u = await User.findOne({ mobile });
+  if (u) {
+    if (u.role !== 'customer') {
+      return res.status(409).json({ message: 'Mobile already registered with another role' });
+    }
+    const okPw = await bcrypt.compare(String(req.body.password), u.passwordHash);
+    if (!okPw) {
+      return res.status(409).json({ message: 'Mobile already registered. Enter your existing password to add this salon, or sign in.' });
+    }
+    const existingCust = await Customer.findOne({ shopId: shop._id, mobile, deleted: false });
+    if (existingCust && String(existingCust.userId) === String(u._id)) {
+      u.shopId = shop._id;
+      return res.status(200).json(await issue(u));
+    }
+    u.shopId = shop._id;
+    await Customer.findOneAndUpdate(
+      { shopId: shop._id, mobile },
+      { shopId: shop._id, mobile, name: req.body.name || u.name, email: req.body.email || u.email, userId: u._id, deleted: false },
+      { upsert: true }
+    );
+    return res.status(201).json(await issue(u));
+  }
+
+  u = await User.create({
+    name: req.body.name,
+    mobile,
+    email: req.body.email,
+    role: 'customer',
+    shopId: shop._id,
+    passwordHash: await bcrypt.hash(req.body.password, 10)
+  });
+  await Customer.findOneAndUpdate(
+    { shopId: shop._id, mobile: u.mobile },
+    { shopId: shop._id, mobile: u.mobile, name: u.name, email: u.email, userId: u._id, deleted: false },
+    { upsert: true }
+  );
   res.status(201).json(await issue(u));
 }));
 r.post('/register-shop', wrap(async (req, res) => {

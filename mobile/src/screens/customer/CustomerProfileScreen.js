@@ -9,19 +9,21 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
 import { authSlice, uiSlice } from '../../redux/store';
 import { useTranslation } from '../../i18n';
 import AppHeader from '../../components/AppHeader';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import ChangePasswordCard from '../../components/ChangePasswordCard';
+import SalonPickerModal from '../../components/SalonPickerModal';
 import { pickImageAsDataUrl } from '../../utils/imagePicker';
 import { COLORS, SHADOWS } from '../../theme';
 
 export default function CustomerProfileScreen() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const user = useSelector((s) => s.auth.user);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -29,10 +31,15 @@ export default function CustomerProfileScreen() {
   const [gender, setGender] = useState('');
   const [notes, setNotes] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [activeShops, setActiveShops] = useState([]);
+  const [salonModalOpen, setSalonModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const { data } = await api.get('/customer/profile');
+      const [{ data }, shopsRes] = await Promise.all([
+        api.get('/customer/profile'),
+        api.get('/customer/shops', { skipGlobalLoader: true }),
+      ]);
       const u = data.user || {};
       const c = data.customer || {};
       setName(u.name || '');
@@ -41,8 +48,20 @@ export default function CustomerProfileScreen() {
       setDob(c.dob || '');
       setGender(c.gender || '');
       setNotes(c.notes || '');
+      setActiveShops(shopsRes.data?.activeShops || []);
     } catch {}
   }, []);
+
+  const handleSwitchSalon = async (chosen) => {
+    try {
+      const { data } = await api.post('/customer/switch-shop', { shopId: chosen._id });
+      dispatch(authSlice.actions.updateUser({ shopId: data.shopId, shop: data.shop }));
+      dispatch(uiSlice.actions.setMsg({ type: 'ok', text: data.message }));
+      await load();
+    } catch (e) {
+      dispatch(uiSlice.actions.setMsg({ type: 'error', text: e?.response?.data?.message || e.message }));
+    }
+  };
 
   useEffect(() => {
     load();
@@ -116,6 +135,23 @@ export default function CustomerProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        <View style={[styles.card, SHADOWS.sm]}>
+          <Text style={styles.lbl}>{t('auth.activeSalon')}</Text>
+          <TouchableOpacity
+            style={styles.salonDropBtn}
+            onPress={() => setSalonModalOpen(true)}
+            activeOpacity={0.8}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+              <Ionicons name="storefront-outline" size={18} color={COLORS.amberDark} />
+              <Text style={styles.salonDropTxt} numberOfLines={1}>
+                {user?.shop?.name || t('auth.chooseSalonPlaceholder')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         <LanguageSwitcher />
         <ChangePasswordCard />
 
@@ -127,6 +163,15 @@ export default function CustomerProfileScreen() {
           <Text style={styles.logoutTxt}>{t('common.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <SalonPickerModal
+        visible={salonModalOpen}
+        onClose={() => setSalonModalOpen(false)}
+        shops={activeShops}
+        selectedShopId={user?.shopId}
+        onSelect={handleSwitchSalon}
+        title={t('auth.switchSalon')}
+      />
     </View>
   );
 }
@@ -177,6 +222,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   saveBtnTxt: { fontWeight: '800', color: COLORS.dark, fontSize: 14 },
+  salonDropBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    backgroundColor: COLORS.bg,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  salonDropTxt: { fontSize: 14, fontWeight: '700', color: COLORS.text, flex: 1 },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
