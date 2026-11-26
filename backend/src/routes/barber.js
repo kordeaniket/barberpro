@@ -440,19 +440,74 @@ r.patch('/appointments/:id', wrap(async (req, res) => {
   res.json({ data: a, message: 'Status: ' + a.status });
 }));
 r.post('/invoices', wrap(async (req, res) => {
-  need(req.body, ['appointmentId']);
-  const a = await Appointment.findOne({ _id: req.body.appointmentId, shopId: req.shopId });
-  if (!a) return res.status(404).json({ message: 'Not found' });
-  const discount = Number(req.body.discount || 0), taxPct = Number(req.body.taxPct || 0);
-  const total = Math.max(0, (a.price - discount) * (1 + taxPct / 100));
-  const items = (a.services && a.services.length)
-    ? a.services.map((s) => ({ name: s.name, price: s.price }))
-    : [{ name: a.serviceName, price: a.price }];
-  const inv = await Invoice.create({ shopId: req.shopId, appointmentId: a._id, customerId: a.customerId, items, discount, taxPct, total, method: req.body.method || 'cash' });
-  a.status = 'completed'; await a.save();
-  res.status(201).json({ data: inv, message: 'Bill generated: ₹' + total });
+  const discount = Math.max(0, Number(req.body.discount || 0));
+  const taxPct = Math.max(0, Number(req.body.taxPct || 0));
+  const method = req.body.method || 'cash';
+
+  if (req.body.appointmentId) {
+    const a = await Appointment.findOne({ _id: req.body.appointmentId, shopId: req.shopId });
+    if (!a) return res.status(404).json({ message: 'Appointment not found' });
+
+    const existingInv = await Invoice.findOne({ shopId: req.shopId, appointmentId: a._id });
+    if (existingInv) {
+      return res.status(409).json({ message: 'Bill already generated for this appointment', data: existingInv });
+    }
+
+    const items = (a.services && a.services.length)
+      ? a.services.map((s) => ({ name: s.name, price: s.price }))
+      : [{ name: a.serviceName, price: a.price }];
+    const subtotal = items.reduce((sum, x) => sum + Number(x.price || 0), 0);
+    const total = Math.max(0, Math.round((subtotal - discount) * (1 + taxPct / 100)));
+
+    const inv = await Invoice.create({
+      shopId: req.shopId,
+      appointmentId: a._id,
+      customerId: a.customerId,
+      items,
+      discount,
+      taxPct,
+      total,
+      method
+    });
+    a.status = 'completed';
+    await a.save();
+    const populated = await Invoice.findById(inv._id).populate('customerId', 'name mobile');
+    return res.status(201).json({ data: populated, message: 'Bill generated: ₹' + total });
+  }
+
+  // Direct Quick Bill (customerId + serviceIds)
+  need(req.body, ['customerId']);
+  const cust = await Customer.findOne({ _id: req.body.customerId, shopId: req.shopId });
+  if (!cust) return res.status(404).json({ message: 'Customer not found' });
+
+  const svcIds = Array.isArray(req.body.serviceIds) ? req.body.serviceIds : [];
+  if (!svcIds.length) return res.status(400).json({ message: 'Select at least one service' });
+  const svcs = await Service.find({ _id: { $in: svcIds }, shopId: req.shopId });
+  if (!svcs.length) return res.status(404).json({ message: 'Services not found' });
+
+  const items = svcs.map((s) => ({ name: s.name, price: s.price }));
+  const subtotal = items.reduce((sum, x) => sum + Number(x.price || 0), 0);
+  const total = Math.max(0, Math.round((subtotal - discount) * (1 + taxPct / 100)));
+
+  const inv = await Invoice.create({
+    shopId: req.shopId,
+    customerId: cust._id,
+    items,
+    discount,
+    taxPct,
+    total,
+    method
+  });
+  const populated = await Invoice.findById(inv._id).populate('customerId', 'name mobile');
+  res.status(201).json({ data: populated, message: 'Bill generated: ₹' + total });
 }));
-r.get('/invoices', wrap(async (req, res) => res.json(await Invoice.find({ shopId: req.shopId }).populate('customerId', 'name').sort('-createdAt').limit(200))));
+r.get('/invoices', wrap(async (req, res) => res.json(
+  await Invoice.find({ shopId: req.shopId })
+    .populate('customerId', 'name mobile')
+    .populate('appointmentId', 'date startMin serviceName')
+    .sort('-createdAt')
+    .limit(200)
+)));
 
 r.get('/notifications', wrap(async (req, res) => {
   const recent = await Appointment.find({ shopId: req.shopId })
@@ -531,9 +586,38 @@ r.get('/customers/:id/ledger', wrap(async (req, res) => {
   ]);
 
   const completedAppts = appointments.filter(a => a.status === 'completed');
-  const totalSpent     = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const billedAmount   = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const completedServiceAmount = completedAppts.reduce((sum, a) => sum + (a.price || 0), 0);
+  const totalSpent     = billedAmount > 0 ? billedAmount : completedServiceAmount;
   const cancelledCount = appointments.filter(a => a.status === 'cancelled').length;
   const lastVisitDate  = completedAppts.length ? completedAppts[0].date : null;
+
+  // Service-wise breakdown across completed appointments & direct invoices
+  const svcMap = new Map();
+  const billedApptIds = new Set(invoices.map((inv) => inv.appointmentId && String(inv.appointmentId)).filter(Boolean));
+
+  const addSvc = (name, amount) => {
+    const key = String(name || 'Service').trim();
+    const cur = svcMap.get(key) || { name: key, count: 0, amount: 0 };
+    cur.count += 1;
+    cur.amount += Number(amount || 0);
+    svcMap.set(key, cur);
+  };
+
+  invoices.forEach((inv) => {
+    (inv.items || []).forEach((it) => addSvc(it.name, it.price));
+  });
+
+  completedAppts.forEach((a) => {
+    if (billedApptIds.has(String(a._id))) return;
+    if (a.services && a.services.length) {
+      a.services.forEach((s) => addSvc(s.name, s.price));
+    } else {
+      addSvc(a.serviceName, a.price);
+    }
+  });
+
+  const serviceBreakdown = Array.from(svcMap.values()).sort((x, y) => y.amount - x.amount);
 
   res.json({
     customer,
@@ -541,10 +625,13 @@ r.get('/customers/:id/ledger', wrap(async (req, res) => {
       totalVisits:      appointments.length,
       completedVisits:  completedAppts.length,
       totalSpent,
+      billedAmount,
+      completedServiceAmount,
       cancelledCount,
       lastVisitDate,
       avgSpendPerVisit: completedAppts.length ? +(totalSpent / completedAppts.length).toFixed(2) : 0
     },
+    serviceBreakdown,
     appointments,
     invoices
   });

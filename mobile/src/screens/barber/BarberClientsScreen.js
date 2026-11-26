@@ -251,29 +251,82 @@ export default function BarberClientsScreen() {
                 <Ionicons name="close" size={24} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 420 }}>
+            <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
               <View style={styles.ledgerStats}>
                 <View style={styles.statBox}>
                   <Text style={styles.statVal}>{ledger?.stats?.totalVisits || 0}</Text>
                   <Text style={styles.statLbl}>{t('barber.totalVisits')}</Text>
                 </View>
                 <View style={styles.statBox}>
-                  <Text style={[styles.statVal, { color: COLORS.emerald }]}>
-                    ₹{ledger?.stats?.totalSpent || 0}
+                  <Text style={[styles.statVal, { color: COLORS.blue }]}>
+                    {ledger?.stats?.completedVisits || 0}
                   </Text>
-                  <Text style={styles.statLbl}>{t('barber.totalSpent')}</Text>
+                  <Text style={styles.statLbl}>{t('barber.completed')}</Text>
                 </View>
               </View>
-              {(ledger?.appointments || []).map((a) => (
-                <View key={a._id} style={styles.histRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.histSvc}>{a.serviceName}</Text>
-                    <Text style={styles.histDate}>{a.date}</Text>
-                  </View>
-                  <Text style={styles.histPrice}>₹{a.price}</Text>
-                  <StatusBadge status={a.status} />
+              <View style={styles.ledgerStats}>
+                <View style={styles.statBox}>
+                  <Text style={[styles.statVal, { color: COLORS.emerald }]}>
+                    ₹{ledger?.stats?.billedAmount || 0}
+                  </Text>
+                  <Text style={styles.statLbl}>{t('barber.billedAmount')}</Text>
                 </View>
-              ))}
+                <View style={styles.statBox}>
+                  <Text style={[styles.statVal, { color: COLORS.amberDark }]}>
+                    ₹{ledger?.stats?.completedServiceAmount || 0}
+                  </Text>
+                  <Text style={styles.statLbl}>{t('barber.serviceValue')}</Text>
+                </View>
+              </View>
+
+              {(ledger?.serviceBreakdown || []).length > 0 && (
+                <View style={styles.breakdownCard}>
+                  <Text style={styles.secHeading}>{t('barber.serviceBreakdown')}</Text>
+                  {ledger.serviceBreakdown.map((sb) => (
+                    <View key={sb.name} style={styles.breakdownRow}>
+                      <Text style={styles.breakdownName}>
+                        {sb.name} <Text style={styles.breakdownCount}>×{sb.count}</Text>
+                      </Text>
+                      <Text style={styles.breakdownAmt}>₹{sb.amount}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {(ledger?.invoices || []).length > 0 && (
+                <>
+                  <Text style={styles.secHeading}>{t('barber.invoicesTab')}</Text>
+                  {ledger.invoices.map((inv) => (
+                    <View key={inv._id} style={styles.histRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.histSvc}>
+                          {(inv.items || []).map((i) => i.name).join(', ')}
+                        </Text>
+                        <Text style={styles.histDate}>
+                          {String(inv.method || 'cash').toUpperCase()} • {new Date(inv.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                      <Text style={[styles.histPrice, { color: COLORS.emerald }]}>₹{inv.total}</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              <Text style={[styles.secHeading, { marginTop: 12 }]}>{t('barber.bookings')}</Text>
+              {(ledger?.appointments || []).length === 0 ? (
+                <Text style={styles.empty}>{t('common.noData')}</Text>
+              ) : (
+                (ledger?.appointments || []).map((a) => (
+                  <View key={a._id} style={styles.histRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.histSvc}>{a.serviceName}</Text>
+                      <Text style={styles.histDate}>{a.date}</Text>
+                    </View>
+                    <Text style={styles.histPrice}>₹{a.price}</Text>
+                    <StatusBadge status={a.status} />
+                  </View>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -383,4 +436,22 @@ const styles = StyleSheet.create({
   histSvc: { fontSize: 13, fontWeight: '700', color: COLORS.text },
   histDate: { fontSize: 11, color: COLORS.textMuted },
   histPrice: { fontSize: 13, fontWeight: '800', color: COLORS.text },
+  secHeading: { fontSize: 13, fontWeight: '800', color: COLORS.textMuted, marginBottom: 6, marginTop: 4 },
+  breakdownCard: {
+    backgroundColor: COLORS.amberBg,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.amberLight,
+    marginBottom: 12,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  breakdownName: { fontSize: 13, fontWeight: '700', color: COLORS.dark },
+  breakdownCount: { color: COLORS.amberDark, fontWeight: '800' },
+  breakdownAmt: { fontSize: 13, fontWeight: '800', color: COLORS.emerald },
 });

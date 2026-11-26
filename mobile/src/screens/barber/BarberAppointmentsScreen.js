@@ -22,7 +22,7 @@ import StatusBadge from '../../components/StatusBadge';
 import { formatMin, todayStr } from '../../utils/time';
 import { COLORS, SHADOWS } from '../../theme';
 
-export default function BarberAppointmentsScreen() {
+export default function BarberAppointmentsScreen({ navigation }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const refreshTrigger = useSelector((s) => s.ui.refreshTrigger);
@@ -325,6 +325,16 @@ export default function BarberAppointmentsScreen() {
                     </Text>
                   </TouchableOpacity>
                 </>
+              )}
+              {['confirmed', 'in_progress', 'completed'].includes(item.status) && (
+                <TouchableOpacity
+                  style={[styles.actBtn, { backgroundColor: COLORS.dark }]}
+                  onPress={() => navigation.navigate('Billing')}
+                >
+                  <Text style={[styles.actText, { color: COLORS.amber }]}>
+                    {t('barber.generateBill')}
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
