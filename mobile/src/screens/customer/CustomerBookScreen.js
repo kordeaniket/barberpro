@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -16,7 +17,7 @@ import PaymentModal from '../../components/PaymentModal';
 import { formatMin, getNextDays, todayStr } from '../../utils/time';
 import { COLORS, SHADOWS } from '../../theme';
 
-export default function CustomerBookScreen() {
+export default function CustomerBookScreen({ navigation }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector((s) => s.auth.user);
@@ -28,6 +29,7 @@ export default function CustomerBookScreen() {
   const [date, setDate] = useState(todayStr());
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [bookedSummary, setBookedSummary] = useState(null);
   const [payAppt, setPayAppt] = useState(null);
 
   const days = getNextDays(14);
@@ -50,8 +52,10 @@ export default function CustomerBookScreen() {
       setSlots([]);
       return;
     }
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
     api
-      .get(`/customer/public/slots?code=${shopCode}&date=${date}&serviceIds=${selectedIds.join(',')}`, {
+      .get(`/customer/public/slots?code=${shopCode}&date=${date}&serviceIds=${selectedIds.join(',')}&nowMin=${nowMin}&clientDate=${todayStr()}`, {
         skipGlobalLoader: true,
       })
       .then((res) => setSlots(res.data || []))
@@ -82,8 +86,10 @@ export default function CustomerBookScreen() {
       dispatch(uiSlice.actions.setMsg({ type: 'ok', text: data.message || t('customer.bookingSuccess') }));
       setSelectedIds([]);
       setSelectedSlot(null);
-      if (shop?.acceptOnlinePayment && data.data) {
-        setPayAppt(data.data);
+      if (data.data) {
+        setBookedSummary(data.data);
+      } else {
+        navigation.navigate('Home');
       }
     } catch (e) {
       dispatch(uiSlice.actions.setMsg({ type: 'error', text: e?.response?.data?.message || e.message }));
@@ -148,16 +154,31 @@ export default function CustomerBookScreen() {
         ) : (
           <View style={styles.slotGrid}>
             {slots.map((sl) => {
-              const active = selectedSlot === sl.startMin;
+              const disabled = sl.available === false;
+              const active = selectedSlot === sl.startMin && !disabled;
               return (
                 <TouchableOpacity
                   key={sl.startMin}
+                  disabled={disabled}
                   onPress={() => setSelectedSlot(sl.startMin)}
-                  style={[styles.slotBtn, active && styles.slotActive]}
+                  style={[
+                    styles.slotBtn,
+                    disabled && styles.slotDisabled,
+                    active && styles.slotActive,
+                  ]}
                 >
-                  <Text style={[styles.slotTxt, active && styles.slotTxtActive]}>
+                  <Text
+                    style={[
+                      styles.slotTxt,
+                      disabled && styles.slotTxtDisabled,
+                      active && styles.slotTxtActive,
+                    ]}
+                  >
                     {formatMin(sl.startMin)}
                   </Text>
+                  {disabled ? (
+                    <Text style={styles.bookedTag}>{t('customer.bookedSlot')}</Text>
+                  ) : null}
                 </TouchableOpacity>
               );
             })}
@@ -179,9 +200,73 @@ export default function CustomerBookScreen() {
         )}
       </ScrollView>
 
+      {/* Booking Confirmation Popup Modal */}
+      <Modal
+        visible={Boolean(bookedSummary)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setBookedSummary(null);
+          navigation.navigate('Home');
+        }}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <View style={styles.checkCircle}>
+              <Ionicons name="checkmark-circle" size={44} color={COLORS.emerald} />
+            </View>
+            <Text style={styles.confirmTitle}>{t('customer.bookingConfirmedTitle')}</Text>
+            <Text style={styles.confirmSvc}>{bookedSummary?.serviceName}</Text>
+            <View style={styles.confirmMetaBox}>
+              <Text style={styles.confirmMeta}>
+                📅 {bookedSummary?.date} • ⏰ {formatMin(bookedSummary?.startMin)}
+              </Text>
+              <Text style={styles.confirmPrice}>₹{bookedSummary?.price || 0}</Text>
+            </View>
+
+            {shop?.acceptOnlinePayment ? (
+              <TouchableOpacity
+                style={styles.modalPayBtn}
+                onPress={() => {
+                  const appt = bookedSummary;
+                  setBookedSummary(null);
+                  setPayAppt(appt);
+                }}
+              >
+                <Ionicons name="wallet-outline" size={18} color={COLORS.white} />
+                <Text style={styles.modalPayTxt}>{t('customer.payOnline')}</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            <TouchableOpacity
+              style={styles.modalHomeBtn}
+              onPress={() => {
+                setBookedSummary(null);
+                navigation.navigate('Home');
+              }}
+            >
+              <Text style={styles.modalHomeTxt}>{t('customer.goToDashboard')}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalHistBtn}
+              onPress={() => {
+                setBookedSummary(null);
+                navigation.navigate('History');
+              }}
+            >
+              <Text style={styles.modalHistTxt}>{t('customer.viewBookings')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <PaymentModal
         visible={Boolean(payAppt)}
-        onClose={() => setPayAppt(null)}
+        onClose={() => {
+          setPayAppt(null);
+          navigation.navigate('Home');
+        }}
         appointment={payAppt}
         shop={shop}
       />
@@ -232,8 +317,72 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   slotActive: { backgroundColor: COLORS.dark, borderColor: COLORS.dark },
+  slotDisabled: { backgroundColor: COLORS.surface, borderColor: COLORS.border, opacity: 0.65 },
   slotTxt: { fontSize: 12, fontWeight: '700', color: COLORS.text },
   slotTxtActive: { color: COLORS.amber },
+  slotTxtDisabled: { textDecorationLine: 'line-through', color: COLORS.textLight },
+  bookedTag: { fontSize: 9, fontWeight: '700', color: COLORS.red, textAlign: 'center', marginTop: 2 },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(28, 25, 23, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
+    padding: 22,
+    alignItems: 'center',
+  },
+  checkCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: COLORS.emeraldBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  confirmTitle: { fontSize: 19, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
+  confirmSvc: { fontSize: 14, fontWeight: '700', color: COLORS.amberDark, marginTop: 6, textAlign: 'center' },
+  confirmMetaBox: {
+    width: '100%',
+    backgroundColor: COLORS.bg,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  confirmMeta: { fontSize: 13, color: COLORS.textMuted, fontWeight: '600' },
+  confirmPrice: { fontSize: 20, fontWeight: '800', color: COLORS.dark, marginTop: 4 },
+  modalPayBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.emerald,
+    paddingVertical: 13,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  modalPayTxt: { color: COLORS.white, fontWeight: '800', fontSize: 14 },
+  modalHomeBtn: {
+    width: '100%',
+    backgroundColor: COLORS.amber,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  modalHomeTxt: { color: COLORS.dark, fontWeight: '800', fontSize: 14 },
+  modalHistBtn: { paddingVertical: 10, marginTop: 4 },
+  modalHistTxt: { color: COLORS.textMuted, fontWeight: '700', fontSize: 13 },
   summaryBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',

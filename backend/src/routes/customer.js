@@ -46,8 +46,15 @@ r.get('/public/slots', wrap(async (req, res) => {
   }
 
   if (s.holidays && s.holidays.includes(new Date(req.query.date).getDay())) return res.json([]);
+  const istNow = new Date(Date.now() + 330 * 60000);
+  const istDate = istNow.toISOString().slice(0, 10);
+  const istMin = istNow.getUTCHours() * 60 + istNow.getUTCMinutes();
+  const effectiveToday = req.query.clientDate || istDate;
+  const minStartMin = req.query.date === effectiveToday
+    ? (req.query.nowMin !== undefined ? Number(req.query.nowMin) : istMin)
+    : null;
   const booked = await Appointment.find({ shopId: s._id, date: req.query.date, blocking: true });
-  res.json(genSlots({ openMin: s.openMin, closeMin: s.closeMin, duration, booked }));
+  res.json(genSlots({ openMin: s.openMin, closeMin: s.closeMin, duration, booked, minStartMin }));
 }));
 r.use(auth('customer'));
 

@@ -76,8 +76,10 @@ export default function BarberAppointmentsScreen() {
       setSlots([]);
       return;
     }
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
     api
-      .get(`/barber/slots?date=${date}&serviceIds=${selectedServiceIds.join(',')}`, {
+      .get(`/barber/slots?date=${date}&serviceIds=${selectedServiceIds.join(',')}&nowMin=${nowMin}&clientDate=${todayStr()}`, {
         skipGlobalLoader: true,
       })
       .then((res) => setSlots(res.data || []))
@@ -358,25 +360,33 @@ export default function BarberAppointmentsScreen() {
                 <Text style={styles.noSlots}>{t('barber.noSlots')}</Text>
               ) : (
                 <View style={styles.slotGrid}>
-                  {slots.map((sl) => (
-                    <TouchableOpacity
-                      key={sl.startMin}
-                      onPress={() => setSelectedSlot(sl.startMin)}
-                      style={[
-                        styles.slotBtn,
-                        selectedSlot === sl.startMin && styles.slotBtnActive,
-                      ]}
-                    >
-                      <Text
+                  {slots.map((sl) => {
+                    const disabled = sl.available === false;
+                    const active = selectedSlot === sl.startMin && !disabled;
+                    return (
+                      <TouchableOpacity
+                        key={sl.startMin}
+                        disabled={disabled}
+                        onPress={() => setSelectedSlot(sl.startMin)}
                         style={[
-                          styles.slotTxt,
-                          selectedSlot === sl.startMin && styles.slotTxtActive,
+                          styles.slotBtn,
+                          disabled && styles.slotBtnDisabled,
+                          active && styles.slotBtnActive,
                         ]}
                       >
-                        {formatMin(sl.startMin)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.slotTxt,
+                            disabled && styles.slotTxtDisabled,
+                            active && styles.slotTxtActive,
+                          ]}
+                        >
+                          {formatMin(sl.startMin)}
+                        </Text>
+                        {disabled ? <Text style={styles.bookedTag}>{t('customer.bookedSlot')}</Text> : null}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
 
@@ -486,8 +496,11 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   slotBtnActive: { backgroundColor: COLORS.dark, borderColor: COLORS.dark },
+  slotBtnDisabled: { backgroundColor: COLORS.surface, borderColor: COLORS.border, opacity: 0.65 },
   slotTxt: { fontSize: 12, fontWeight: '600', color: COLORS.text },
   slotTxtActive: { color: COLORS.amber },
+  slotTxtDisabled: { textDecorationLine: 'line-through', color: COLORS.textLight },
+  bookedTag: { fontSize: 9, fontWeight: '700', color: COLORS.red, textAlign: 'center', marginTop: 1 },
   submitBtn: {
     backgroundColor: COLORS.amber,
     paddingVertical: 14,
