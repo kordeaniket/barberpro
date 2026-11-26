@@ -44,7 +44,7 @@ export default function CustomerHomeScreen({ navigation }) {
       setBookings(bookRes.data || []);
       dispatch(notificationsSlice.actions.setNotifications(notifRes.data || []));
       setActiveShops(shopsRes.data?.activeShops || []);
-    } catch {}
+    } catch { }
   }, [dispatch]);
 
   const handleSwitchSalon = async (chosen) => {
@@ -111,13 +111,13 @@ export default function CustomerHomeScreen({ navigation }) {
               <Text style={styles.shopName}>{shop?.name || 'BarberPro Salon'}</Text>
               {shop?.city ? <Text style={styles.shopCity}>📍 {shop.city}</Text> : null}
             </View>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.switchBtn}
               onPress={() => setSalonModalOpen(true)}
             >
               <Ionicons name="swap-horizontal" size={14} color={COLORS.dark} />
               <Text style={styles.switchBtnTxt}>{t('auth.switchSalon')}</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           <TouchableOpacity style={styles.bookCta} onPress={() => navigation.navigate('Book')}>
